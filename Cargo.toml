@@ -1,0 +1,39 @@
+[package]
+name = "xlsx_batch_reader"
+version = "0.1.1"
+edition = "2021"
+license = "MIT"
+description = "An Excel/OpenDocument Spreadsheets file batch reader, in pure Rust."
+
+[profile.dev]
+debug = 2           # 0-不输出任何 debug 信息;1-行信息;2-完整的 debug 信息
+opt-level = 1               # 使用稍高一些的优化级别，最低是0，最高是3;1-基本优化
+incremental = true          # 增量编译，debug默认启用
+codegen-units = 256
+overflow-checks = false     # 关闭整数溢出检查
+
+
+[profile.release]
+lto = "thin"              # true/'fat'-结果类似，文件较小 'thin'-明显更快、文件会大一些
+strip = true              # 取消编译的额外信息，会减少基本固定的大小
+debug = 0                  # 不输出任何 debug 信息
+opt-level = 3              # release缺省为3
+incremental = false        # 增量编译，release默认不启用
+codegen-units = 16         # 增加代码单元的数量可以并行编译代码，对于增量编译，默认值是 256，非增量编译是 16
+overflow-checks = true     # 关闭整数溢出检查
+
+[features]
+default = []                    # 默认不启用任何额外功能
+xlsxwriter = ["rust_xlsxwriter"]            # 定义名为"rust_xlsxwriter"的feature，依赖于"dependency_writer"
+
+[dependencies]
+anyhow = "1.0.75"
+zip = "0.6.4"
+chrono = "0.4.35"
+quick-xml = "0.27.1"
+lazy_static = "1.4.0"
+
+[dependencies.rust_xlsxwriter]
+version = "0.54.0"
+features = ["zlib", "chrono"]
+optional = true
