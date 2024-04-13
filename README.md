@@ -19,7 +19,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             // empty rows will be skiped
             for (row, cells) in rows_nums.into_iter().zip(rows_data) {
                 for (col, cel) in cells.into_iter().enumerate() {
-                    let val: String = cel.get()?.unwrap();   // supprted types: String, i64, f64, bool, NaiveDate
+                    // supprted types: String, i64, f64, bool, NaiveDate, NaiveDateTime(v0.1.2), NaiveTime(v0.1.2)
+                    let val: String = cel.get()?.unwrap();   
                     println!("the value of {} is {val}", get_ord_from_tuple(row, (col+1) as u16)?);  
                 }
             }
@@ -28,8 +29,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 ```
-output:
-```shell
+possible output:
+```text
 the value of A1 is a  
 the value of B1 is    
 the value of C1 is c   
@@ -76,12 +77,42 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 ```
-output:
-```shell
+possible output:
+```text
 a merged cell(top left cell), taking 2 row(s) and 2 column(s)
 ```
 
-3. simple batch writer
+3. read date and time
+```rust
+use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
+use xlsx_batch_reader::{read::XlsxBook, MAX_COL_NUM};
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut book = XlsxBook::new("xlsx/test.xlsx", true)?;
+    for shname in book.get_visible_sheets().clone() {
+        // left_ncol should not be 0
+        // the tail empty cells will be ignored, if you want the length of cells in each row is fixed, you can set right_ncol to a number not MAX_COL_NUM
+        let mut sheet = book.get_sheet_by_name(&shname, 100, 3, 1, MAX_COL_NUM, false)?;
+
+        if let Some((_, rows_data)) = sheet.get_remaining_cells()? {
+            let row = &rows_data[0];
+            let val_dt: NaiveDate = row[0].get()?.unwrap();
+            let val_tm: NaiveTime = row[0].get()?.unwrap();
+            let val_dttm: NaiveDateTime = row[0].get()?.unwrap();
+            println!("date:{}\ntime:{}\ndatetime:{}", val_dt, val_tm, val_dttm);
+        }; 
+    }
+    Ok(())
+}
+```
+possible output:
+```text
+date:2024-01-04
+time:14:01:02
+datetime:2024-01-04 14:01:02
+```
+
+4. simple batch writer
 ```rust
 use xlsx_batch_reader::{get_num_from_ord, read::XlsxBook, write::XlsxWriter};
 

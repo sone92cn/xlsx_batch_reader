@@ -90,7 +90,7 @@ impl Sheet {
         let mut icol = head.len() as ColNum;
         if add_nrow {
             if nrows.len() != data.len() {
-                return Err(anyhow!("列号与数据行不匹配！".to_string()));
+                return Err(anyhow!("the length of nrows is not equal to the length of data".to_string()));
             } else {
                 icol += 1;
             }
@@ -143,10 +143,10 @@ impl XlsxWriter {
                 self.sheets.insert(name.to_owned(), sht);
                 self.names.push(name.to_owned());
             };
-            self.sheets.get_mut(name).ok_or(anyhow!("sheet-{}不存在！", name))?.write_rows(nrows, data, pre_cells)?;
+            self.sheets.get_mut(name).ok_or(anyhow!("sheet-{} not exist", name))?.write_rows(nrows, data, pre_cells)?;
             Ok(())
         }else{
-            Err(anyhow!("文件已保存，不能再编辑".to_string()))
+            Err(anyhow!("cannot write saved workbook".to_string()))
         }
     }
     /// save as file

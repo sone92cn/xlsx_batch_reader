@@ -1,8 +1,10 @@
 [package]
 name = "xlsx_batch_reader"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 license = "MIT"
+repository = "https://github.com/sone92cn/xlsx_batch_reader"
+keywords = ["Excel", "xlsx", "batch", "reader"]
 description = "An Excel/OpenDocument Spreadsheets file batch reader, in pure Rust."
 
 [profile.dev]
@@ -11,7 +13,6 @@ opt-level = 1               # 使用稍高一些的优化级别，最低是0，�
 incremental = true          # 增量编译，debug默认启用
 codegen-units = 256
 overflow-checks = false     # 关闭整数溢出检查
-
 
 [profile.release]
 lto = "thin"              # true/'fat'-结果类似，文件较小 'thin'-明显更快、文件会大一些

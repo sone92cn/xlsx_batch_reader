@@ -16,19 +16,19 @@ macro_rules! get_attr_val {
     ($e:expr, $tag:expr) => {
         match $e.try_get_attribute($tag)? {
             Some(v) => {v.unescape_value()?},
-            None => return Err(anyhow!("属性{}不存在！", $tag))
+            None => return Err(anyhow!("attribute {} not exist", $tag))
         }
     };
     ($e:expr, $tag:expr, parse) => {
         match $e.try_get_attribute($tag)? {
             Some(v) => {v.unescape_value()?.parse()?},
-            None => return Err(anyhow!("属性{}不存在！", $tag))
+            None => return Err(anyhow!("attribute {} not exist", $tag))
         }
     };
     ($e:expr, $tag:expr, to_string) => {
         match $e.try_get_attribute($tag)? {
             Some(v) => {v.unescape_value()?.to_string()},
-            None => return Err(anyhow!("属性{}不存在！", $tag))
+            None => return Err(anyhow!("attribute {} not exist", $tag))
         }
     };
 }
@@ -75,7 +75,7 @@ impl XlsxBook {
                         };
                     },
                     Ok(Event::Eof) => break, // exits the loop when reaching end of file
-                    Err(e) => return Err(anyhow!("workbook.xml.refs已损坏: {:?}", e)),
+                    Err(e) => return Err(anyhow!("workbook.xml.refs broken: {:?}", e)),
                     _ => ()                  // There are several other `Event`s we do not consider here
                 }
                 buf.clear();
@@ -103,7 +103,7 @@ impl XlsxBook {
                             let sheet = if book_refs.contains_key(&rid) {
                                 format!("xl/{}", book_refs[&rid])
                             } else {
-                                return Err(anyhow!("sheet-{rid}对应的Relationship未找到!"))
+                                return Err(anyhow!("Relationship of sheet-{rid} not found"))
                             };
                             match e.try_get_attribute("state").unwrap_or(None) {
                                 Some(attr) => {
@@ -125,7 +125,7 @@ impl XlsxBook {
                             let sheet = if book_refs.contains_key(&rid) {
                                 format!("xl/{}", book_refs[&rid])
                             } else {
-                                return Err(anyhow!("sheet的rid对应的Relationship未找到!"))
+                                return Err(anyhow!("Relationship of sheet-rid not found!"))
                             };
                             match e.try_get_attribute("state").unwrap_or(None) {
                                 Some(attr) => {
@@ -139,7 +139,7 @@ impl XlsxBook {
                         };
                     },
                     Ok(Event::Eof) => break, // exits the loop when reaching end of file
-                    Err(e) => return Err(anyhow!("workbook.xml已损坏: {:?}", e)),
+                    Err(e) => return Err(anyhow!("workbook.xml is broken: {:?}", e)),
                     _ => ()                  // There are several other `Event`s we do not consider here
                 }
                 buf.clear();
@@ -204,15 +204,10 @@ impl XlsxBook {
                                     act = false;
                                 } else if e.name().as_ref() == b"cellXfs" {
                                     break;
-                                    // if inx == cnt {
-                                    //     break;
-                                    // } else {
-                                    //     return Err(anyhow!("styles.xml-cellXfs已损坏!"));
-                                    // }
                                 };
                             },
                             Ok(Event::Eof) => break, // exits the loop when reaching end of file
-                            Err(e) => return Err(anyhow!("styles.xml已损坏: {:?}", e)),
+                            Err(e) => return Err(anyhow!("styles.xml is broken: {:?}", e)),
                             _ => ()                  // There are several other `Event`s we do not consider here
                         }
                         buf.clear();
@@ -276,7 +271,7 @@ impl XlsxBook {
                                 }
                             }
                             Ok(Event::Eof) => {return Ok(())}, // exits the loop when reaching end of file
-                            Err(e) => return Err(anyhow!("sharedStrings.xml已损坏: {:?}", e)),
+                            Err(e) => return Err(anyhow!("sharedStrings.xml is broken: {:?}", e)),
                             _ => (),                     // There are several other `Event`s we do not consider here
                         }
                     };
@@ -304,13 +299,13 @@ impl XlsxBook {
                                 }
                             },
                             Ok(Event::Eof) => break, // exits the loop when reaching end of file
-                            Err(e) => return Err(anyhow!("sharedStrings.xml已损坏: {:?}", e)),
+                            Err(e) => return Err(anyhow!("sharedStrings.xml is broken: {:?}", e)),
                             _ => ()                  // There are several other `Event`s we do not consider here
                         }
                         buf.clear();
                     };
                     if cap != vec_share.len() {  
-                        return Err(anyhow!("文件已破损-shareString-长度不匹配！"));
+                        return Err(anyhow!("shareString-lenth check error!！"));
                     };
                     vec_share
                 },
@@ -361,12 +356,12 @@ impl XlsxBook {
                         });
                     },
                     Err(_) => {
-                        return Err(anyhow!("文件已破损-sheet {} - {} 不存在！", k.as_str(), v.as_str()));
+                        return Err(anyhow!("sheet {} - {} lost！", k.as_str(), v.as_str()));
                     }
                 };
             };
         };
-        Err(anyhow!(format!("{} sheet不存在！", sht_name)))
+        Err(anyhow!(format!("{} sheet not found!", sht_name)))
     }
 }
 
@@ -531,7 +526,7 @@ impl<'a> XlsxSheet<'a> {
                     }
                 },
                 Ok(Event::Eof) => {break Ok(None)}, // exits the loop when reaching end of file
-                Err(e) => return Err(anyhow!("sharedStrings.xml已损坏: {:?}", e)),
+                Err(e) => return Err(anyhow!("sharedStrings.xml is broken: {:?}", e)),
                 _ => ()                  // There are several other `Event`s we do not consider here
             }
             self.buf.clear();
@@ -551,7 +546,7 @@ impl<'a> XlsxSheet<'a> {
         }
         match &self.first_row {
             Some(v) => Ok(v.clone()),
-            None => Err(anyhow!("未检测到标题！"))
+            None => Err(anyhow!("no header row！"))
         }
     }
     fn process_merged_cells(&mut self, count: usize) -> Result<()> {
@@ -570,13 +565,13 @@ impl<'a> XlsxSheet<'a> {
                                 let right_end =  if let Some(x) = dim.get(1) {
                                     get_tuple_from_ord(x.as_bytes())?
                                 } else {
-                                    return Err(anyhow!("mergeCell区域异常：{}", attr));
+                                    return Err(anyhow!("mergeCell error：{}", attr));
                                 };
                                 if let Some(ref mut mgs) = self.merged_rects {
                                     mgs.push((left_top, right_end))
                                 };
                             } else {
-                                return Err(anyhow!("mergeCell区域异常：{}", attr));
+                                return Err(anyhow!("mergeCell error：{}", attr));
                             }; 
                         }
                     },
@@ -589,13 +584,13 @@ impl<'a> XlsxSheet<'a> {
                                 let right_end =  if let Some(x) = dim.get(1) {
                                     get_tuple_from_ord(x.as_bytes())?
                                 } else {
-                                    return Err(anyhow!("mergeCell区域异常：{}", attr));
+                                    return Err(anyhow!("mergeCell error：{}", attr));
                                 };
                                 if let Some(ref mut mgs) = self.merged_rects {
                                     mgs.push((left_top, right_end))
                                 };
                             } else {
-                                return Err(anyhow!("mergeCell区域异常：{}", attr));
+                                return Err(anyhow!("mergeCell error：{}", attr));
                             }; 
                         }
                     },
@@ -616,7 +611,7 @@ impl<'a> XlsxSheet<'a> {
             if let Some(ref rects) = self.merged_rects {
                 if rects.len() != count {
                     self.merged_rects = None;
-                    return Err(anyhow!("合并单元格数量异常！"));
+                    return Err(anyhow!("the number of merged ranges is not equal to the number of rows"));
                 };
             }
         }
@@ -639,13 +634,13 @@ impl<'a> XlsxSheet<'a> {
                     }
                 };
             } else {
-                return Err(anyhow!("请先读取数据，再获取合并区域！"));
+                return Err(anyhow!("finish fetching data first"));
             }
         };
         if let Some(ref rects) = self.merged_rects {
             Ok(rects)
         } else {
-            return Err(anyhow!("合并区域解析失败！"));
+            return Err(anyhow!("merged_rects error"));
         }
     }
     /// Get all the remaining data
@@ -727,13 +722,13 @@ impl FromCellValue for String {
         match val {
             CellValue::Number(n) => Ok(Some(n.to_string())),
             CellValue::Date(n) => {
-                Ok(Some((BASE_DATE.clone()+(Duration::try_days(*n as i64).ok_or(anyhow!("日期时间值异常"))?)).to_string()))
+                Ok(Some((BASE_DATE.clone()+(Duration::try_days(*n as i64).ok_or(anyhow!("invalid date"))?)).to_string()))
             },
             CellValue::Time(n) => {
                 Ok(Some(NaiveTime::from_num_seconds_from_midnight_opt(((*n-n.trunc()) * 86400.0) as u32, 0).unwrap().format("%H:%M:%S").to_string()))
             }
             CellValue::Datetime(n) => {
-                Ok(Some((BASE_DATETIME.clone()+(Duration::try_days(*n as i64).ok_or(anyhow!("日期时间值异常"))?)+(Duration::try_seconds(((*n-n.trunc()) * 86400.0) as i64).ok_or(anyhow!("日期时间值异常"))?)).to_string()))
+                Ok(Some((BASE_DATETIME.clone()+(Duration::try_days(*n as i64).ok_or(anyhow!("invalid date"))?)+(Duration::try_seconds(((*n-n.trunc()) * 86400.0) as i64).ok_or(anyhow!("invalid date"))?)).to_string()))
             },
             CellValue::Shared(s) => Ok(Some((**s).to_owned())),
             CellValue::String(s) => Ok(Some((*s).to_owned())),
@@ -754,16 +749,16 @@ impl FromCellValue for f64 {
             CellValue::Shared(s) => {
                 match s.parse::<f64>() {
                     Ok(n) => Ok(Some(n)),
-                    Err(_) => Err(anyhow!(format!("无效值{:?}", val)))
+                    Err(_) => Err(anyhow!(format!("invalid value-{:?}", val)))
                 }
             },
             CellValue::String(s) => {
                 match s.parse::<f64>() {
                     Ok(n) => Ok(Some(n)),
-                    Err(_) => Err(anyhow!(format!("无效值{:?}", val)))
+                    Err(_) => Err(anyhow!(format!("invalid value-{:?}", val)))
                 }
             },
-            CellValue::Error(_) => Err(anyhow!(format!("无效值{:?}", val))),
+            CellValue::Error(_) => Err(anyhow!(format!("invalid value-{:?}", val))),
             CellValue::Bool(b) => Ok(Some(if *b {1.0}else{0.0})),
             CellValue::Blank => Ok(None),
         }
@@ -780,16 +775,16 @@ impl FromCellValue for i64 {
             CellValue::Shared(s) => {
                 match s.parse::<i64>() {
                     Ok(n) => Ok(Some(n)),
-                    Err(_) => Err(anyhow!(format!("无效值{:?}", val)))
+                    Err(_) => Err(anyhow!(format!("invalid value-{:?}", val)))
                 }
             },
             CellValue::String(s) => {
                 match s.parse::<i64>() {
                     Ok(n) => Ok(Some(n)),
-                    Err(_) => Err(anyhow!(format!("无效值{:?}", val)))
+                    Err(_) => Err(anyhow!(format!("invalid value-{:?}", val)))
                 }
             },
-            CellValue::Error(_) => Err(anyhow!(format!("无效值{:?}", val))),
+            CellValue::Error(_) => Err(anyhow!(format!("invalid value-{:?}", val))),
             CellValue::Bool(b) => Ok(Some(if *b {1}else{0})),
             CellValue::Blank => Ok(None),
         }
@@ -806,16 +801,16 @@ impl FromCellValue for bool {
             CellValue::Shared(s) => {
                 match s.parse::<bool>() {
                     Ok(n) => Ok(Some(n)),
-                    Err(_) => Err(anyhow!(format!("无效值{:?}", val)))
+                    Err(_) => Err(anyhow!(format!("invalid value-{:?}", val)))
                 }
             },
             CellValue::String(s) => {
                 match s.parse::<bool>() {
                     Ok(n) => Ok(Some(n)),
-                    Err(_) => Err(anyhow!(format!("无效值{:?}", val)))
+                    Err(_) => Err(anyhow!(format!("invalid value-{:?}", val)))
                 }
             },
-            CellValue::Error(_) => Err(anyhow!(format!("无效值{:?}", val))),
+            CellValue::Error(_) => Err(anyhow!(format!("invalid value-{:?}", val))),
             CellValue::Bool(b) => Ok(Some(*b)),
             CellValue::Blank => Ok(None),
         }
@@ -825,17 +820,17 @@ impl FromCellValue for bool {
 impl FromCellValue for NaiveDate {
     fn try_from_cval(val: &CellValue<'_>) -> Result<Option<Self>> {
         match val {
-            CellValue::Number(n) => Ok(Some(BASE_DATE.clone()+(Duration::try_days(*n as i64).ok_or(anyhow!("日期时间值异常"))?))),
-            CellValue::Date(n) => Ok(Some(BASE_DATE.clone()+(Duration::try_days(*n as i64).ok_or(anyhow!("日期时间值异常"))?))),
-            CellValue::Time(n) => Ok(Some(BASE_DATE.clone()+(Duration::try_days(*n as i64).ok_or(anyhow!("日期时间值异常"))?))),
-            CellValue::Datetime(n) => Ok(Some(BASE_DATE.clone()+(Duration::try_days(*n as i64).ok_or(anyhow!("日期时间值异常"))?))),
+            CellValue::Number(n) => Ok(Some(BASE_DATE.clone()+(Duration::try_days(*n as i64).ok_or(anyhow!("invalid datetime"))?))),
+            CellValue::Date(n) => Ok(Some(BASE_DATE.clone()+(Duration::try_days(*n as i64).ok_or(anyhow!("invalid datetime"))?))),
+            CellValue::Time(n) => Ok(Some(BASE_DATE.clone()+(Duration::try_days(*n as i64).ok_or(anyhow!("invalid datetime"))?))),
+            CellValue::Datetime(n) => Ok(Some(BASE_DATE.clone()+(Duration::try_days(*n as i64).ok_or(anyhow!("invalid datetime"))?))),
             CellValue::Shared(s) => {
                 match NaiveDate::parse_from_str(*s, "%Y-%m-%d") {
                     Ok(v) => Ok(Some(v)),
                     Err(_) => {
                         match NaiveDate::parse_from_str(*s, "%Y/%m/%d") {
                             Ok(v) => Ok(Some(v)),
-                            Err(_) => {Err(anyhow!(format!("无效值{:?}", val)))}
+                            Err(_) => {Err(anyhow!(format!("invalid datetime-{:?}", val)))}
                         }
                     }
                 }
@@ -846,13 +841,101 @@ impl FromCellValue for NaiveDate {
                     Err(_) => {
                         match NaiveDate::parse_from_str(s, "%Y/%m/%d") {
                             Ok(v) => Ok(Some(v)),
-                            Err(_) => {Err(anyhow!(format!("无效值{:?}", val)))}
+                            Err(_) => {Err(anyhow!(format!("invalid datetime{:?}", val)))}
                         }
                     }
                 }
             },
-            CellValue::Error(_) => Err(anyhow!(format!("无效值{:?}", val))),
-            CellValue::Bool(_) => Err(anyhow!(format!("无效值{:?}", val))),
+            CellValue::Error(_) => Err(anyhow!(format!("invalid datetime{:?}", val))),
+            CellValue::Bool(_) => Err(anyhow!(format!("invalid datetime{:?}", val))),
+            CellValue::Blank => Ok(None),
+        }
+    }
+}
+
+impl FromCellValue for NaiveDateTime {
+    fn try_from_cval(val: &CellValue<'_>) -> Result<Option<Self>> {
+        match val {
+            CellValue::Number(n) => {
+                Ok(Some(BASE_DATETIME.clone()+(Duration::try_days(*n as i64).ok_or(anyhow!("invalid date"))?)+(Duration::try_seconds(((*n-n.trunc()) * 86400.0) as i64).ok_or(anyhow!("invalid date"))?)))
+            },
+            CellValue::Date(n) => {
+                Ok(Some(BASE_DATETIME.clone()+(Duration::try_days(*n as i64).ok_or(anyhow!("invalid date"))?)+(Duration::try_seconds(((*n-n.trunc()) * 86400.0) as i64).ok_or(anyhow!("invalid date"))?)))
+            },
+            CellValue::Time(n) => {
+                Ok(Some(BASE_DATETIME.clone()+(Duration::try_days(*n as i64).ok_or(anyhow!("invalid date"))?)+(Duration::try_seconds(((*n-n.trunc()) * 86400.0) as i64).ok_or(anyhow!("invalid date"))?)))
+            },
+            CellValue::Datetime(n) => {
+                Ok(Some(BASE_DATETIME.clone()+(Duration::try_days(*n as i64).ok_or(anyhow!("invalid date"))?)+(Duration::try_seconds(((*n-n.trunc()) * 86400.0) as i64).ok_or(anyhow!("invalid date"))?)))
+            },
+            CellValue::Shared(s) => {
+                match NaiveDateTime::parse_from_str(*s, "%Y-%m-%d %H:%M:%S") {
+                    Ok(v) => Ok(Some(v)),
+                    Err(_) => {
+                        match NaiveDateTime::parse_from_str(*s, "%Y/%m/%d %H:%M:%S") {
+                            Ok(v) => Ok(Some(v)),
+                            Err(_) => {Err(anyhow!(format!("invalid datetime-{:?}", val)))}
+                        }
+                    }
+                }
+            },
+            CellValue::String(s) => {
+                match NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S") {
+                    Ok(v) => Ok(Some(v)),
+                    Err(_) => {
+                        match NaiveDateTime::parse_from_str(s, "%Y/%m/%d %H:%M:%S") {
+                            Ok(v) => Ok(Some(v)),
+                            Err(_) => {Err(anyhow!(format!("invalid datetime{:?}", val)))}
+                        }
+                    }
+                }
+            },
+            CellValue::Error(_) => Err(anyhow!(format!("invalid datetime{:?}", val))),
+            CellValue::Bool(_) => Err(anyhow!(format!("invalid datetime{:?}", val))),
+            CellValue::Blank => Ok(None),
+        }
+    }
+}
+
+impl FromCellValue for NaiveTime {
+    fn try_from_cval(val: &CellValue<'_>) -> Result<Option<Self>> {
+        match val {
+            CellValue::Number(n) => {
+                Ok(Some(NaiveTime::from_num_seconds_from_midnight_opt(((*n-n.trunc()) * 86400.0) as u32, 0).ok_or(anyhow!("invalid time"))?))
+            },
+            CellValue::Date(n) => {
+                Ok(Some(NaiveTime::from_num_seconds_from_midnight_opt(((*n-n.trunc()) * 86400.0) as u32, 0).ok_or(anyhow!("invalid time"))?))
+            },
+            CellValue::Time(n) => {
+                Ok(Some(NaiveTime::from_num_seconds_from_midnight_opt(((*n-n.trunc()) * 86400.0) as u32, 0).ok_or(anyhow!("invalid time"))?))
+            },
+            CellValue::Datetime(n) => {
+                Ok(Some(NaiveTime::from_num_seconds_from_midnight_opt(((*n-n.trunc()) * 86400.0) as u32, 0).ok_or(anyhow!("invalid time"))?))
+            },
+            CellValue::Shared(s) => {
+                match NaiveTime::parse_from_str(*s, "%H:%M:%S") {
+                    Ok(v) => Ok(Some(v)),
+                    Err(_) => {
+                        match NaiveTime::parse_from_str(*s, "%H:%M:%S") {
+                            Ok(v) => Ok(Some(v)),
+                            Err(_) => {Err(anyhow!(format!("invalid time-{:?}", val)))}
+                        }
+                    }
+                }
+            },
+            CellValue::String(s) => {
+                match NaiveTime::parse_from_str(s, "%H:%M:%S") {
+                    Ok(v) => Ok(Some(v)),
+                    Err(_) => {
+                        match NaiveTime::parse_from_str(s, "%H:%M:%S") {
+                            Ok(v) => Ok(Some(v)),
+                            Err(_) => {Err(anyhow!(format!("invalid time{:?}", val)))}
+                        }
+                    }
+                }
+            },
+            CellValue::Error(_) => Err(anyhow!(format!("invalid time{:?}", val))),
+            CellValue::Bool(_) => Err(anyhow!(format!("invalid time{:?}", val))),
             CellValue::Blank => Ok(None),
         }
     }
@@ -872,7 +955,7 @@ impl FromCellValue for Date32 {
                     Err(_) => {
                         match NaiveDate::parse_from_str(*s, "%Y/%m/%d") {
                             Ok(v) => Ok(Some((v - UNIX_DATE.clone()).num_days() as i32)),
-                            Err(_) => {Err(anyhow!(format!("无效值{:?}", val)))}
+                            Err(_) => {Err(anyhow!(format!("invalid date32-{:?}", val)))}
                         }
                     }
                 }
@@ -883,13 +966,13 @@ impl FromCellValue for Date32 {
                     Err(_) => {
                         match NaiveDate::parse_from_str(s, "%Y/%m/%d") {
                             Ok(v) => Ok(Some((v - UNIX_DATE.clone()).num_days() as i32)),
-                            Err(_) => {Err(anyhow!(format!("无效值{:?}", val)))}
+                            Err(_) => {Err(anyhow!(format!("invalid date32-{:?}", val)))}
                         }
                     }
                 }
             },
-            CellValue::Error(_) => Err(anyhow!(format!("无效值{:?}", val))),
-            CellValue::Bool(_) => Err(anyhow!(format!("无效值{:?}", val))),
+            CellValue::Error(_) => Err(anyhow!(format!("invalid date32-{:?}", val))),
+            CellValue::Bool(_) => Err(anyhow!(format!("invalid date32-{:?}", val))),
             CellValue::Blank => Ok(None),
         }
     }
