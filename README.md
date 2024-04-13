@@ -112,7 +112,7 @@ time:14:01:02
 datetime:2024-01-04 14:01:02
 ```
 
-4. simple batch writer
+4. simple batch writer (xlsxwriter feature should be enabled)
 ```rust
 use xlsx_batch_reader::{get_num_from_ord, read::XlsxBook, write::XlsxWriter};
 
