@@ -114,8 +114,10 @@ datetime:2024-01-04 14:01:02
 
 4. simple batch writer (xlsxwriter feature should be enabled)
 ```rust
+#[cfg(feature = "xlsxwriter")]
 use xlsx_batch_reader::{get_num_from_ord, read::XlsxBook, write::XlsxWriter};
 
+#[cfg(feature = "xlsxwriter")]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut writer = XlsxWriter::new();
     let mut book = XlsxBook::new("xlsx/test.xlsx", true)?;

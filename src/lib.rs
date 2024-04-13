@@ -4,7 +4,7 @@ use anyhow::{anyhow, Result};
 /// Excel file reader
 pub mod read;
 /// Excel file writer
-#[cfg(feature = "rust_xlsxwriter")]
+#[cfg(feature = "xlsxwriter")]
 pub mod write;
 
 /// days since UNIX epoch

@@ -1,6 +1,8 @@
 
+#[cfg(feature = "xlsxwriter")]
 use xlsx_batch_reader::{get_num_from_ord, read::XlsxBook, write::XlsxWriter};
 
+#[cfg(feature = "xlsxwriter")]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut writer = XlsxWriter::new();
     let mut book = XlsxBook::new("xlsx/test.xlsx", true)?;
@@ -19,3 +21,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     writer.save_as("xlsx/out.xlsx")?;
     Ok(())
 }
+
+#[cfg(not(feature = "xlsxwriter"))]
+fn main() {
+    println!("Please enable the feature 'rust_xlsxwriter' to run this example.");
+}
+
+// cargo run --example merged_range --features xlsxwriter
