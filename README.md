@@ -19,7 +19,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             // empty rows will be skiped
             for (row, cells) in rows_nums.into_iter().zip(rows_data) {
                 for (col, cel) in cells.into_iter().enumerate() {
-                    // supprted types: String, i64, f64, bool, NaiveDate, NaiveDateTime(v0.1.2), NaiveTime(v0.1.2)
+                    // supprted types: String, i64, f64, bool, Date32, NaiveDate, NaiveDateTime(v0.1.2), NaiveTime(v0.1.2)
                     let val: String = cel.get()?.unwrap();   
                     println!("the value of {} is {val}", get_ord_from_tuple(row, (col+1) as u16)?);  
                 }

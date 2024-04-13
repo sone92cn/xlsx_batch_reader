@@ -7,8 +7,13 @@ pub mod read;
 #[cfg(feature = "rust_xlsxwriter")]
 pub mod write;
 
+/// days since UNIX epoch
+pub type Date32 = i32;  
+/// row number
 pub type RowNum = u32;
+/// column number
 pub type ColNum = u16;
+/// merged range
 pub type MergedRange = ((RowNum, ColNum), (RowNum, ColNum));
 
 /// max column number

@@ -5,10 +5,8 @@ use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime};
 use quick_xml::{reader::Reader, events::Event};
 
 use lazy_static::lazy_static;
-use crate::{get_num_from_ord, get_tuple_from_ord, CellValue, RowNum, ColNum, MAX_COL_NUM, MergedRange};
+use crate::{get_num_from_ord, get_tuple_from_ord, Date32, CellValue, RowNum, ColNum, MAX_COL_NUM, MergedRange};
 
-/// days since UNIX epoch
-pub type Date32 = i32;  
 
 // ooxml： http://www.officeopenxml.com/
 
