@@ -110,6 +110,7 @@ possible output:
 date:2024-01-04
 time:14:01:02
 datetime:2024-01-04 14:01:02
+timestamp:1704376862
 ```
 
 4. simple batch writer (feature xlsxwriter should be enabled)
