@@ -14,7 +14,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             for (row, cells) in rows_nums.into_iter().zip(rows_data) {
                 for (col, cel) in cells.into_iter().enumerate() {
                     let val: String = cel.get()?.unwrap();   // supprted types: String, i64, f64, bool, NaiveDate
-                    println!("the value of {} is {val}", get_ord_from_tuple(row, (col+1) as u16)?);  
+                    println!("the value of {} is {val}; raw cell is {:?}", get_ord_from_tuple(row, (col+1) as u16)?, cel);  
                 }
             }
         };

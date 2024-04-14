@@ -21,7 +21,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 for (col, cel) in cells.into_iter().enumerate() {
                     // supprted types: String, i64, f64, bool, Date32, Timestamp(v0.1.4), NaiveDate, NaiveDateTime(v0.1.2), NaiveTime(v0.1.2)
                     let val: String = cel.get()?.unwrap();   
-                    println!("the value of {} is {val}", get_ord_from_tuple(row, (col+1) as u16)?);  
+                    println!("the value of {} is {val}; raw cell is {:?}", get_ord_from_tuple(row, (col+1) as u16)?, cel);   
                 }
             }
         };
@@ -31,16 +31,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 possible output:
 ```text
-the value of A1 is a  
-the value of B1 is    
-the value of C1 is c   
-the value of D1 is d   
-the value of A2 is 1   
-the value of B2 is    
-the value of C2 is s   
-the value of A4 is 2024-01-04   
-the value of B4 is    
-the value of C4 is 4   
+the value of A1 is a; raw cell is Shared("a")
+the value of B1 is ; raw cell is Blank
+the value of C1 is c; raw cell is Shared("c")
+the value of D1 is d; raw cell is Shared("d")
+the value of A2 is 1; raw cell is Number(1.0)
+the value of B2 is ; raw cell is Blank
+the value of C2 is s; raw cell is Shared("s")
+the value of A4 is 2024-01-04; raw cell is Date(45295.58405092593)
+the value of B4 is ; raw cell is Blank
+the value of C4 is 4; raw cell is Number(4.0)  
 ```
 
 2. merged ranges

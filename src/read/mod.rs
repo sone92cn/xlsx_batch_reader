@@ -39,9 +39,7 @@ pub struct XlsxBook {
     map_style: HashMap<u32, u32>,
     map_sheet: HashMap<String, String>,
     zip_archive: ZipArchive<BufReader<File>>,
-    fmts_date: Vec<u32>,
-    fmts_time: Vec<u32>,
-    fmts_datetime: Vec<u32>,
+    datetime_fmts: HashMap<u32, u8>,
 }
 
 impl XlsxBook {
@@ -146,9 +144,7 @@ impl XlsxBook {
         };
 
         // 初始化单元格格式
-        let mut fmts_date = FMT_DATES.clone();
-        let mut fmts_time = FMT_TIMES.clone();
-        let mut fmts_datetime = FMT_DATETIMES.clone();
+        let mut datetime_fmts = DATETIME_FMTS.clone();
         let map_style = {
             match zip_archive.by_name("xl/styles.xml") {
                 Ok(file) => {
@@ -168,12 +164,12 @@ impl XlsxBook {
                                     let code = get_attr_val!(e, "formatCode", to_string);
                                     if code.contains("yy") {
                                         if code.contains("h") || code.contains("ss") {
-                                            fmts_datetime.push(get_attr_val!(e, "numFmtId", parse));
+                                            datetime_fmts.insert(get_attr_val!(e, "numFmtId", parse), FMT_DATETIME);
                                         } else {
-                                            fmts_date.push(get_attr_val!(e, "numFmtId", parse));
+                                            datetime_fmts.insert(get_attr_val!(e, "numFmtId", parse), FMT_DATE);
                                         }
                                     } else if code.contains("ss") {
-                                        fmts_time.push(get_attr_val!(e, "numFmtId", parse))
+                                        datetime_fmts.insert(get_attr_val!(e, "numFmtId", parse), FMT_TIME);
                                     };
                                 } else if act && (e.name().as_ref() == b"xf"){
                                     map_style.insert(inx, get_attr_val!(e, "numFmtId", parse));
@@ -185,12 +181,12 @@ impl XlsxBook {
                                     let code = get_attr_val!(e, "formatCode", to_string);
                                     if code.contains("yy") {
                                         if code.contains("h") || code.contains("ss") {
-                                            fmts_datetime.push(get_attr_val!(e, "numFmtId", parse));
+                                            datetime_fmts.insert(get_attr_val!(e, "numFmtId", parse), FMT_DATETIME);
                                         } else {
-                                            fmts_date.push(get_attr_val!(e, "numFmtId", parse));
+                                            datetime_fmts.insert(get_attr_val!(e, "numFmtId", parse), FMT_DATE);
                                         }
                                     } else if code.contains("ss") {
-                                        fmts_time.push(get_attr_val!(e, "numFmtId", parse))
+                                        datetime_fmts.insert(get_attr_val!(e, "numFmtId", parse), FMT_TIME);
                                     };
                                 } else if act && (e.name().as_ref() == b"xf"){
                                     map_style.insert(inx, get_attr_val!(e, "numFmtId", parse));
@@ -226,9 +222,7 @@ impl XlsxBook {
                 shts_hidden,
                 shts_visible,
                 zip_archive,
-                fmts_date,
-                fmts_time,
-                fmts_datetime,
+                datetime_fmts,
             };
         if load_share {
             book.load_share_strings()?;
@@ -346,9 +340,7 @@ impl XlsxBook {
                             status: 1,
                             str_share: &self.str_share,
                             map_style: &self.map_style,
-                            fmts_date: &self.fmts_date,
-                            fmts_time: &self.fmts_time,
-                            fmts_datetime: &self.fmts_datetime,
+                            datetime_fmts: &self.datetime_fmts,
                             max_size: None,
                             merged_rects: None
                         });
@@ -377,9 +369,7 @@ pub struct XlsxSheet<'a> {
     right_ncol: ColNum,
     first_row_is_header: bool,
     first_row: Option<(u32, Vec<CellValue<'a>>)>,
-    fmts_date: &'a Vec<u32>,
-    fmts_time: &'a Vec<u32>,
-    fmts_datetime: &'a Vec<u32>,
+    datetime_fmts: &'a HashMap<u32, u8>,
     merged_rects: Option<Vec<((RowNum, ColNum), (RowNum, ColNum))>>
 }
 
@@ -481,15 +471,16 @@ impl<'a> XlsxSheet<'a> {
                             if cell_type == b"s" {
                                 row_value.push(CellValue::Shared(&self.str_share[String::from_utf8(t.to_vec())?.parse::<usize>()?]));
                             } else if cell_type == b"n" {
-                                if self.fmts_date.contains(&num_fmt_id){
+                                let fmt = self.datetime_fmts.get(&num_fmt_id).unwrap_or(&FMT_DEFAULT);
+                                if *fmt == FMT_DATE {
                                     row_value.push(CellValue::Date(String::from_utf8(t.to_vec())?.parse::<f64>()?));
-                                } else if self.fmts_time.contains(&num_fmt_id){
-                                    row_value.push(CellValue::Time(String::from_utf8(t.to_vec())?.parse::<f64>()?));
-                                } else if self.fmts_datetime.contains(&num_fmt_id){
+                                } else if *fmt == FMT_DATETIME {
                                     row_value.push(CellValue::Datetime(String::from_utf8(t.to_vec())?.parse::<f64>()?));
+                                } else if *fmt == FMT_TIME {
+                                    row_value.push(CellValue::Time(String::from_utf8(t.to_vec())?.parse::<f64>()?));
                                 } else {
                                     row_value.push(CellValue::Number(String::from_utf8(t.to_vec())?.parse::<f64>()?));
-                                }
+                                };
                             } else if cell_type == b"b" {
                                 if String::from_utf8(t.to_vec())?.parse::<usize>() == Ok(1) {
                                     row_value.push(CellValue::Bool(true));
@@ -1020,29 +1011,26 @@ impl<'a> CellValue<'a> {
     }
 }
 
+// datetime sign
+static FMT_DATE: u8 = 0;
+static FMT_TIME: u8 = 1;
+static FMT_DATETIME: u8 = 2;
+static FMT_DEFAULT: u8 = 255;
 
 lazy_static! {
     static ref BASE_DATE: NaiveDate = NaiveDate::from_ymd_opt(1899, 12,30).unwrap();
     static ref BASE_DATETIME: NaiveDateTime = BASE_DATE.and_hms_opt(0, 0, 0).unwrap();
     static ref UNIX_DATE: NaiveDate = NaiveDate::from_ymd_opt(1970,  1, 1).unwrap();
-    static ref FMT_DATES: Vec<u32> = {
-        let mut v: Vec<u32> = Vec::new();
-        v.extend(14..18);
-        v.extend(27..32);
-        v.extend(34..37);
-        v.extend(50..59);
-        v
-    };
-    static ref FMT_TIMES: Vec<u32> = {
-        let mut v: Vec<u32> = Vec::new();
-        v.extend(18..22);
-        v.extend(32..34);
-        v.extend(45..48);
-        v
-    };
-    static ref FMT_DATETIMES: Vec<u32> = {
-        let mut v: Vec<u32> = Vec::new();
-        v.push(22);
+    static ref DATETIME_FMTS: HashMap<u32, u8> = {
+        let mut v = HashMap::new();
+        v.extend((14..18).map(|n| (n, FMT_DATE)));
+        v.extend((27..32).map(|n| (n, FMT_DATE)));
+        v.extend((34..37).map(|n| (n, FMT_DATE)));
+        v.extend((50..59).map(|n| (n, FMT_DATE)));  // FMT_DATE - 0
+        v.extend((18..22).map(|n| (n, FMT_TIME)));
+        v.extend((32..34).map(|n| (n, FMT_TIME)));
+        v.extend((45..48).map(|n| (n, FMT_TIME)));  // FMT_TIME - 1
+        v.insert(22, FMT_DATETIME);                 // FMT_DATETIME - 2
         v
     };
     static ref NUM_FMTS: HashMap<u32, String> = {
