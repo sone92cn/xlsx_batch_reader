@@ -5,7 +5,7 @@ use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime};
 use quick_xml::{reader::Reader, events::Event};
 
 use lazy_static::lazy_static;
-use crate::{get_num_from_ord, get_tuple_from_ord, Date32, CellValue, RowNum, ColNum, MAX_COL_NUM, MergedRange};
+use crate::{get_num_from_ord, get_tuple_from_ord, Date32, Timestamp, CellValue, RowNum, ColNum, MAX_COL_NUM, MergedRange};
 
 
 // ooxml： http://www.officeopenxml.com/
@@ -976,7 +976,45 @@ impl FromCellValue for Date32 {
     }
 }
 
+impl FromCellValue for Timestamp {
+    fn try_from_cval(val: &CellValue<'_>) -> Result<Option<Self>> {
+        match val {
+            // 1970-01-01的Excel值为25569
+            CellValue::Number(n) => Ok(Some(((*n - 25569.0) * 86400.0).into())),
+            CellValue::Date(n) => Ok(Some(((*n - 25569.0) * 86400.0).into())),
+            CellValue::Time(n) => Ok(Some(((*n - 25569.0) * 86400.0).into())),
+            CellValue::Datetime(n) => Ok(Some(((*n - 25569.0) * 86400.0).into())),
+            CellValue::Shared(s) => {
+                match NaiveDateTime::parse_from_str(*s, "%Y-%m-%d %H:%M:%S") {
+                    Ok(v) => Ok(Some(v.and_utc().timestamp().into())),
+                    Err(_) => {
+                        match NaiveDateTime::parse_from_str(*s, "%Y-%m-%d %H:%M:%S") {
+                            Ok(v) => Ok(Some(v.and_utc().timestamp().into())),
+                            Err(_) => {Err(anyhow!(format!("invalid timestamp-{:?}", val)))}
+                        }
+                    }
+                }
+            },
+            CellValue::String(s) => {
+                match NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S") {
+                    Ok(v) => Ok(Some(v.and_utc().timestamp().into())),
+                    Err(_) => {
+                        match NaiveDateTime::parse_from_str(s, "%Y/%m/%d %H:%M:%S") {
+                            Ok(v) => Ok(Some(v.and_utc().timestamp().into())),
+                            Err(_) => {Err(anyhow!(format!("invalid timestamp-{:?}", val)))}
+                        }
+                    }
+                }
+            },
+            CellValue::Error(_) => Err(anyhow!(format!("invalid timestamp-{:?}", val))),
+            CellValue::Bool(_) => Err(anyhow!(format!("invalid timestamp-{:?}", val))),
+            CellValue::Blank => Ok(None),
+        }
+    }
+}
+
 impl<'a> CellValue<'a> {
+    /// Attention: as to blank cell, String will return String::new(), and other types will return None. 
     pub fn get<T: FromCellValue>(&'a self) -> Result<Option<T>> {
         T::try_from_cval(self)
     }

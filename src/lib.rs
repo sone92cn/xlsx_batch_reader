@@ -9,6 +9,9 @@ pub mod write;
 
 /// days since UNIX epoch
 pub type Date32 = i32;  
+/// seconds since UNIX epoch
+#[derive(Debug)]
+pub struct Timestamp(i64);
 /// row number
 pub type RowNum = u32;
 /// column number
@@ -18,6 +21,26 @@ pub type MergedRange = ((RowNum, ColNum), (RowNum, ColNum));
 
 /// max column number
 pub static MAX_COL_NUM: u16 = std::u16::MAX;
+
+impl Timestamp {
+    pub fn seconds(&self) -> i64 {
+        self.0
+    }
+}
+
+// i64 into Timestamp
+impl Into<Timestamp> for i64 {
+    fn into(self) -> Timestamp {
+        Timestamp(self)
+    }
+}
+
+// f64 into Timestamp
+impl Into<Timestamp> for f64 {
+    fn into(self) -> Timestamp {
+        Timestamp(self as i64)
+    }
+}
 
 /// Convert character based Excel cell column addresses to number. If you pass parameter D to this function, you will get 4
 pub fn get_num_from_ord(addr: &[u8]) -> Result<ColNum>{
