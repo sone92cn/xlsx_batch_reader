@@ -1,10 +1,10 @@
 [package]
 name = "xlsx_batch_reader"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/sone92cn/xlsx_batch_reader"
-keywords = ["Excel", "xlsx", "batch", "reader"]
+keywords = ["excel", "xlsx", "batch", "reader"]
 description = "An Excel/OpenDocument Spreadsheets file batch reader, in pure Rust."
 
 [profile.dev]

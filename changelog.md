@@ -1,5 +1,11 @@
 # Changelog
 
+
+## [0.1.3] - 2024.4.14
+
+### Fixed
+* unable to use feature xlsxwrite
+
 ## [0.1.2] - 2024.4.13
 
 ### Added
