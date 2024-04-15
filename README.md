@@ -85,7 +85,7 @@ a merged cell(top left cell), taking 2 row(s) and 2 column(s)
 3. read date and time
 ```rust
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
-use xlsx_batch_reader::{read::XlsxBook, MAX_COL_NUM};
+use xlsx_batch_reader::{read::XlsxBook, Timestamp, MAX_COL_NUM};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut book = XlsxBook::new("xlsx/test.xlsx", true)?;
