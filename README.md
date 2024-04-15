@@ -99,7 +99,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let val_dt: NaiveDate = row[0].get()?.unwrap();
             let val_tm: NaiveTime = row[0].get()?.unwrap();
             let val_dttm: NaiveDateTime = row[0].get()?.unwrap();
-            println!("date:{}\ntime:{}\ndatetime:{}", val_dt, val_tm, val_dttm);
+            let val_stamp: Timestamp = row[0].get()?.unwrap();   // since v0.1.4
+            println!("date:{}\ntime:{}\ndatetime:{}\ntimestamp:{}", val_dt, val_tm, val_dttm, val_stamp.utc());
         }; 
     }
     Ok(())

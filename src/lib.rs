@@ -1,5 +1,7 @@
 //! An Excel/OpenDocument Spreadsheets file batch reader, in pure Rust. This crate supports Office 2007 or newer file formats(xlsx, xlsm, etc). The most obvious difference from other Excel file reading crates is that it does not read the whole file into memory, but read in batches. So that it can maintain low memory usage, especially when reading large files.
+use chrono::Local;
 use anyhow::{anyhow, Result};
+use lazy_static::lazy_static;
 
 /// Excel file reader
 pub mod read;
@@ -23,8 +25,13 @@ pub type MergedRange = ((RowNum, ColNum), (RowNum, ColNum));
 pub static MAX_COL_NUM: u16 = std::u16::MAX;
 
 impl Timestamp {
-    pub fn seconds(&self) -> i64 {
+    /// use cell value as UTC datatime and get timestamp
+    pub fn utc(&self) -> i64 {
         self.0
+    }
+    /// use cell value as local datatime and get timestamp, the local time zone is determined by the time zone in which it was compiled
+    pub fn local(&self) -> i64 {
+        self.0 - *LOCAL_OFFSET
     }
 }
 
@@ -136,3 +143,7 @@ pub enum CellValue<'a> {
     Error(String)
 }
 
+lazy_static! {
+    /// local time zone offset
+    pub static ref LOCAL_OFFSET: i64 = Local::now().offset().local_minus_utc() as i64;
+}
