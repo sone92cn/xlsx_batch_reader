@@ -145,5 +145,5 @@ pub enum CellValue<'a> {
 
 lazy_static! {
     /// local time zone offset
-    pub static ref LOCAL_OFFSET: i64 = Local::now().offset().local_minus_utc() as i64;
+    static ref LOCAL_OFFSET: i64 = Local::now().offset().local_minus_utc() as i64;
 }
