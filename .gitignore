@@ -1,5 +1,5 @@
 /xlsx
 /target
-*.lock
 *.exe
 *.dll
+Cargo.lock
