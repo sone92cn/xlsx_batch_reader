@@ -187,6 +187,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 | `xlsxwriter` | Enable simple writer to write data to xlsx file |
 
 
+# Todo
+- [ ] support to iter cached sheet by batch
+
 # Changelog
 
 ### [0.1.5] - 2024.4.26
