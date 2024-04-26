@@ -183,55 +183,53 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 # Features
 | Features | Description |
 | --- | --- |
-| `cached` | Enable cached sheet (read all data into memory when created) |
-| `xlsxwriter` | Enable simple writer to write data to xlsx file |
+| `cached` | Enable cached xlsx sheet (read all sheet data into memory when created) |
+| `xlsxwriter` | Enable simple xlsx writer |
 
 
-# Todo
+# Todos
 - [ ] support to iter cached sheet by batch
 
-# Changelog
-### [0.1.6] - 2024.4.26
-#### Fixed
-* fix project description
 
-### [0.1.5] - 2024.4.26
-#### Added
+# Changelogs
+## [0.1.6] - 2024.4.26
+### Fixed
+* project description
+
+
+## [0.1.5] - 2024.4.26
+### Added
 * support read all data into memory when sheet created(fearure `cached` should be enabled)
 
 ### Fixed
 * unable to read the size of sheet 
 
-### [0.1.4] - 2024.4.15
 
-#### Added
+## [0.1.4] - 2024.4.15
+### Added
 * get cell value as timestamp
 
-#### Changed
+### Changed
 * Optimaze date&time recognition algorithm for better performance
 
 
-### [0.1.3] - 2024.4.14
-
-#### Fixed
+## [0.1.3] - 2024.4.14
+### Fixed
 * unable to use feature xlsxwrite
 
-
-### [0.1.2] - 2024.4.13
-
-#### Added
+## [0.1.2] - 2024.4.13
+### Added
 * get cell value as datetime and time
 
-#### Changed
+### Changed
 * output error message in English
 
 
-### [0.1.1] - 2024.4.13
-
-#### Added
+## [0.1.1] - 2024.4.13
+### Added
 * simple writer example
 
-### [0.1.0] - 2023.4.13
 
-#### Added
+## [0.1.0] - 2023.4.13
+### Added
 * first release
