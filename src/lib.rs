@@ -2,6 +2,7 @@
 use chrono::Local;
 use anyhow::{anyhow, Result};
 use lazy_static::lazy_static;
+use read::FromCellValue;
 
 /// Excel file reader
 pub mod read;
@@ -9,11 +10,11 @@ pub mod read;
 #[cfg(feature = "xlsxwriter")]
 pub mod write;
 
-/// days since UNIX epoch
-pub type Date32 = i32;  
 /// seconds since UNIX epoch
 #[derive(Debug)]
 pub struct Timestamp(i64);
+/// days since UNIX epoch
+pub type Date32 = i32;  
 /// row number
 pub type RowNum = u32;
 /// column number
@@ -23,6 +24,8 @@ pub type MergedRange = ((RowNum, ColNum), (RowNum, ColNum));
 
 /// max column number
 pub static MAX_COL_NUM: u16 = std::u16::MAX;
+/// max row number
+pub static MAX_ROW_NUM: u32 = std::u32::MAX;
 
 impl Timestamp {
     /// use cell value as UTC datatime and get timestamp
@@ -78,7 +81,6 @@ pub fn get_ord_from_num(num: ColNum) -> Result<String> {
     addr.reverse();
     Ok(String::from_iter(addr))
 }
-
 
 /// Convert character based Excel cell addresses to numbers. If you pass parameter D2 to this function, you will get (2, 4)
 pub fn get_tuple_from_ord(addr: &[u8]) -> Result<(RowNum, ColNum)> {
@@ -142,6 +144,14 @@ pub enum CellValue<'a> {
     String(String),
     Error(String)
 }
+
+impl<'a> CellValue<'a> {
+    /// Attention: as to blank cell, String will return String::new(), and other types will return None. 
+    pub fn get<T: FromCellValue>(&'a self) -> Result<Option<T>> {
+        T::try_from_cval(self)
+    }
+}
+
 
 lazy_static! {
     /// local time zone offset

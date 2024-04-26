@@ -1,30 +1,31 @@
+use xlsx_batch_reader::{get_num_from_ord, is_merged_cell, read::XlsxBook};
 
-#[cfg(feature = "xlsxwriter")]
-use xlsx_batch_reader::{get_num_from_ord, read::XlsxBook, write::XlsxWriter};
-
-#[cfg(feature = "xlsxwriter")]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut writer = XlsxWriter::new();
     let mut book = XlsxBook::new("xlsx/test.xlsx", true)?;
     for shname in book.get_visible_sheets().clone() {
         // left_ncol should not be 0
         // each row will have 3 cells.
         let mut sheet = book.get_sheet_by_name(&shname, 100, 0, 1, get_num_from_ord("C".as_bytes())?, true)?;
 
-        // the sheet name will be write at the begin of each row
-        let pre_cells = vec![shname];
-        if let Some((rows_nums, rows_data)) = sheet.get_remaining_cells()? {
-            writer.append_rows("sheet", rows_nums, rows_data, &pre_cells)?;
-            // if you don't want row numbers to be writed before data, set nrows = vec![];
+        // this is not necessary, if you don't care about the headers.
+        let (_, _header) = sheet.get_header_row()?;
+        if let Some((_rows_nums, _rows_data)) = sheet.get_remaining_cells()? {
+            //  some code
         }; 
-    };
-    writer.save_as("xlsx/out.xlsx")?;
+
+        // should be called when all data have been scaned.
+        let merged_rngs = sheet.get_merged_ranges()?;
+        match is_merged_cell(merged_rngs, 2, get_num_from_ord("A".as_bytes())?) {
+            (true, None) => {
+                println!("a merged cell(not top left cell)");
+            },
+            (true, Some((nrow, ncol))) => {
+                println!("a merged cell(top left cell), taking {nrow} row(s) and {ncol} column(s)");
+            },
+            _ => {
+                println!("not a merged cell");
+            }
+        }
+    }
     Ok(())
 }
-
-#[cfg(not(feature = "xlsxwriter"))]
-fn main() {
-    println!("Please enable the feature 'rust_xlsxwriter' to run this example.");
-}
-
-// cargo run --example merged_range --features xlsxwriter

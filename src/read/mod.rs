@@ -1,12 +1,14 @@
-use std::{cmp::max, fs::File, path::Path, io::BufReader, collections::HashMap};
+use std::{cmp::max, collections::HashMap, fs::File, io::BufReader, path::Path};
 use anyhow::{anyhow, Result};
 use zip::{ZipArchive, read::ZipFile};
 use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime};
 use quick_xml::{reader::Reader, events::Event};
 
 use lazy_static::lazy_static;
-use crate::{get_num_from_ord, get_tuple_from_ord, Date32, Timestamp, CellValue, RowNum, ColNum, MAX_COL_NUM, MergedRange};
+use crate::{get_num_from_ord, get_tuple_from_ord, CellValue, ColNum, Date32, MergedRange, RowNum, Timestamp, MAX_COL_NUM};
 
+#[cfg(feature = "cached")]
+use crate::is_merged_cell;
 
 // ooxml： http://www.officeopenxml.com/
 
@@ -353,6 +355,11 @@ impl XlsxBook {
         };
         Err(anyhow!(format!("{} sheet not found!", sht_name)))
     }
+    /// get cached sheet by name, all data will be cached in memory when sheet created
+    #[cfg(feature = "cached")]
+    pub fn get_cached_sheet_by_name(&mut self, sht_name: &String, iter_batch: usize, skip_rows: u32, left_ncol: ColNum, right_ncol: ColNum, first_row_is_header: bool) -> Result<CachedSheet> {
+        Ok(self.get_sheet_by_name(sht_name, iter_batch, skip_rows, left_ncol, right_ncol, first_row_is_header)?.into_cached_sheet()?)
+    }
 }
 
 pub struct XlsxSheet<'a> {
@@ -374,9 +381,66 @@ pub struct XlsxSheet<'a> {
 }
 
 impl<'a> XlsxSheet<'a> {
+    /// into cached sheet
+    #[cfg(feature = "cached")]
+    pub fn into_cached_sheet(mut self) -> Result<CachedSheet<'a>> {
+        let (data, bottom_nrow) =  match self.get_next_row() {
+            Ok(Some((r, d))) => {
+                let mut data = if let Some((rn, _)) = self.max_size {
+                    HashMap::with_capacity(rn as usize)
+                } else {
+                    HashMap::new()
+                };
+                data.insert(r, d);
+                let mut last_nrow = r;
+                loop {
+                    match self.get_next_row() {
+                        Ok(Some((r, d))) => {
+                            last_nrow = r;
+                            data.insert(r, d);
+                        },
+                        Ok(None) => {
+                            break;
+                        },
+                        Err(e) => {
+                            return Err(e);
+                        }
+                    };
+                };
+                (data, last_nrow)
+            },
+            Ok(None) => {(HashMap::new(), 0)},
+            Err(e) => {return Err(e);}
+        };
+        let merged_rects = self.get_merged_ranges()?.to_owned();
+        let right_ncol = if self.right_ncol == MAX_COL_NUM {
+            if let Some((_mr, mc)) = self.max_size {
+                mc
+            } else {
+                self.right_ncol
+            }
+        } else {
+            self.right_ncol
+        };
+        Ok(CachedSheet {
+            data,
+            merged_rects,
+            key: self.key,
+            _iter_batch: self.iter_batch,
+            top_nrow: if self.first_row_is_header {self.skip_rows+2} else {self.skip_rows+1},
+            bottom_nrow,
+            left_ncol: self.left_ncol + 1,
+            right_ncol,
+            header_row: self.first_row,
+        })
+    }
     /// get sheet name
     pub fn sheet_name(&self) -> &String {
         &self.key
+    }
+    /// get column range
+    pub fn column_range(&self) -> (ColNum, ColNum) {
+        (self.left_ncol, self.right_ncol)
     }
     fn get_next_row(&mut self) -> Result<Option<(u32, Vec<CellValue<'a>>)>> {
         let mut col: ColNum = 0;
@@ -450,6 +514,16 @@ impl<'a> XlsxSheet<'a> {
                             // row_value.push(CellValue::Number(row_num as f64));  // 行号单独返回
                         }; 
                     };
+                },
+                Ok(Event::Empty(ref e)) => {
+                    prev_head = e.name().as_ref().to_vec();
+                    if self.status == 1 && prev_head == b"dimension" {
+                        let attr = get_attr_val!(e, "ref", to_string);
+                        let dim: Vec<&str> = attr.split(':').collect();
+                        if let Some(x) = dim.get(1) {
+                            self.max_size = Some(get_tuple_from_ord(x.as_bytes())?);
+                        };
+                    }
                 },
                 Ok(Event::Text(ref t)) => {
                     // b for boolean
@@ -606,7 +680,7 @@ impl<'a> XlsxSheet<'a> {
         }
         Ok(())
     }
-    /// get merged ranges
+    /// get merged ranges, call after all data getched
     pub fn get_merged_ranges(&mut self) -> Result<&Vec<MergedRange>> {
         if self.merged_rects.is_none() {
             if self.status == 0 {  // 已关闭的情况下读取合并单元格
@@ -636,8 +710,8 @@ impl<'a> XlsxSheet<'a> {
     pub fn get_remaining_cells(&mut self) -> Result<Option<(Vec<u32>, Vec<Vec<CellValue<'_>>>)>> {
         match self.get_next_row() {
             Ok(Some((r, d))) => {
-                let (mut rows, mut data) = if let Some((rn, cn)) = self.max_size {
-                    (Vec::with_capacity(max(1, rn-r+1) as usize), Vec::with_capacity(cn as usize))
+                let (mut rows, mut data) = if let Some((rn, _)) = self.max_size {
+                    (Vec::with_capacity(max(1, rn-r+1) as usize), Vec::with_capacity(rn as usize))
                 } else {
                     (Vec::new(), Vec::new())
                 };
@@ -701,6 +775,80 @@ impl<'a> Iterator for XlsxSheet<'a> {
     }
 }
 
+#[cfg(feature = "cached")]
+pub struct CachedSheet<'a> {
+    data: HashMap<RowNum, Vec<CellValue<'a>>>,
+    key: String,
+    _iter_batch: usize,   ///  TODO iter cached sheet
+    top_nrow: RowNum,
+    bottom_nrow: RowNum,
+    left_ncol: ColNum,
+    right_ncol: ColNum,
+    header_row: Option<(u32, Vec<CellValue<'a>>)>,
+    merged_rects: Vec<((RowNum, ColNum), (RowNum, ColNum))>
+}
+
+#[cfg(feature = "cached")]
+impl <'a> CachedSheet<'a> {
+    /// get sheet name
+    pub fn sheet_name(&self) -> &String {
+        &self.key
+    }
+    /// get row range
+    pub fn row_range(&self) -> (RowNum, RowNum) {
+        (self.top_nrow, self.bottom_nrow)
+    }
+    /// get column range
+    pub fn column_range(&self) -> (ColNum, ColNum) {
+        (self.left_ncol, self.right_ncol)
+    }
+    /// get header if first_row_is_header is true
+    pub fn get_header_row(&self) -> Result<(u32, Vec<CellValue<'a>>)> {
+        match &self.header_row {
+            Some(v) => Ok(v.clone()),
+            None => Err(anyhow!("no header row！"))
+        }
+    }
+    /// get merged ranges, call as any time
+    pub fn get_merged_ranges(&self) -> &Vec<MergedRange> {
+        &self.merged_rects
+    }
+    /// Get all data
+    pub fn get_all_cells(&self) -> &HashMap<RowNum, Vec<CellValue<'_>>> {
+        &self.data
+    }
+    /// get cell value by address, if the cell is not exist, return &CellValue::Blank
+    pub fn get_cell_value<A: AsRef<str>>(&self, addr: A) -> Result<&CellValue<'a>> {
+        let (row, col) = get_tuple_from_ord(addr.as_ref().as_bytes())?;
+        if row >= self.top_nrow && row <= self.bottom_nrow
+            && col >= self.left_ncol && col <= self.right_ncol {
+            if self.data.contains_key(&row) {
+                Ok(self.data[&row].get((col-1) as usize).unwrap_or(&CellValue::Blank))
+            } else {
+                Ok(&CellValue::Blank)
+            }
+        } else {
+            Err(anyhow!("Invalid address - out of range"))
+        }
+    }
+    /// get cell value by address, if the cell is not exist, return &CellValue::Blank
+    pub fn get_cell_value_with_merge_info<A: AsRef<str>>(&self, addr: A) -> Result<(&CellValue<'a>, (bool, Option<(RowNum, ColNum)>))> {
+        let (row, col) = get_tuple_from_ord(addr.as_ref().as_bytes())?;
+        if row >= self.top_nrow && row <= self.bottom_nrow
+            && col >= self.left_ncol && col <= self.right_ncol {
+            let (merge, spans) = is_merged_cell(&self.merged_rects, row, col);
+            if self.data.contains_key(&row) {
+                Ok((self.data[&row].get((col-1) as usize).unwrap_or(&CellValue::Blank), (merge, spans)))
+            } else {
+                Ok((&CellValue::Blank, (merge, spans)))
+            }
+        } else {
+            Err(anyhow!("Invalid address - out of range"))
+        }
+    }
+}
+
+/// get another type of data from cell value
 pub trait FromCellValue {
     fn try_from_cval(val: &CellValue<'_>) -> Result<Option<Self>> 
         where Self: Sized;
@@ -1001,13 +1149,6 @@ impl FromCellValue for Timestamp {
             CellValue::Bool(_) => Err(anyhow!(format!("invalid timestamp-{:?}", val))),
             CellValue::Blank => Ok(None),
         }
-    }
-}
-
-impl<'a> CellValue<'a> {
-    /// Attention: as to blank cell, String will return String::new(), and other types will return None. 
-    pub fn get<T: FromCellValue>(&'a self) -> Result<Option<T>> {
-        T::try_from_cval(self)
     }
 }
 

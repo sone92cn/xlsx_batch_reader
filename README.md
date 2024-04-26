@@ -114,7 +114,49 @@ datetime:2024-01-04 14:01:02
 timestamp:1704376862
 ```
 
-4. simple batch writer (feature xlsxwriter should be enabled)
+4. cached reader(feature cached should be enabled)
+```rust
+use xlsx_batch_reader::{read::XlsxBook, MAX_COL_NUM};
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut book = XlsxBook::new("xlsx/test.xlsx", true)?;
+    for shname in book.get_visible_sheets().clone() {
+        // left_ncol should not be 0
+        // iter_batch will be supported in the future
+        // the tail empty cells will be ignored, if you want the length of cells in each row is fixed, you can set right_ncol to a number not MAX_COL_NUM
+        let sheet = book.get_cached_sheet_by_name(&shname, 100, 1, 1, MAX_COL_NUM, false)?;
+
+        println!("sheet: {}, row_ranges: {:?}, col_ranges: {:?}", sheet.sheet_name(), sheet.row_range(), sheet.column_range());
+
+        let (_, merge_info) = sheet.get_cell_value_with_merge_info("B2")?;
+
+        match merge_info {
+            (true, None) => {
+                println!("B2 is a merged cell(not top left cell)");
+            },
+            (true, Some((nrow, ncol))) => {
+                println!("B2 is a merged cell(top left cell), taking {nrow} row(s) and {ncol} column(s)");
+            },
+            _ => {
+                println!("B2 is not a merged cell");
+            }
+        };
+
+        let a4 = sheet.get_cell_value("A4")?;
+        println!("A4={:?}", a4);
+    }
+    Ok(())
+}
+```
+possible output:
+```shell
+sheet: Sheet1, row_ranges: (2, 4), col_ranges: (1, 4)
+B2 is a merged cell(not top left cell)
+A4=Date(45295.58405092593)
+```
+
+
+5. simple batch writer (feature xlsxwriter should be enabled)
 ```rust
 use xlsx_batch_reader::{get_num_from_ord, read::XlsxBook, write::XlsxWriter};
 
@@ -137,3 +179,53 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 ```
+
+# Features
+| Features | Description |
+| --- | --- |
+| `cached` | Enable cached sheet (read all data into memory when created) |
+| `xlsxwriter` | Enable simple writer to write data to xlsx file |
+
+
+# Changelog
+
+### [0.1.5] - 2024.4.26
+#### Added
+* support read all data into memory when sheet created(fearure `cached` should be enabled)
+
+### Fixed
+* unable to read the size of sheet 
+
+### [0.1.4] - 2024.4.15
+
+#### Added
+* get cell value as timestamp
+
+#### Changed
+* Optimaze date&time recognition algorithm for better performance
+
+
+### [0.1.3] - 2024.4.14
+
+#### Fixed
+* unable to use feature xlsxwrite
+
+
+### [0.1.2] - 2024.4.13
+
+#### Added
+* get cell value as datetime and time
+
+#### Changed
+* output error message in English
+
+
+### [0.1.1] - 2024.4.13
+
+#### Added
+* simple writer example
+
+### [0.1.0] - 2023.4.13
+
+#### Added
+* first release
