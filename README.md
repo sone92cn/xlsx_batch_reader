@@ -191,6 +191,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 - [ ] support to iter cached sheet by batch
 
 # Changelog
+### [0.1.6] - 2024.4.26
+#### Fixed
+* fix project description
+
+### Fixed
+* unable to read the size of sheet 
 
 ### [0.1.5] - 2024.4.26
 #### Added

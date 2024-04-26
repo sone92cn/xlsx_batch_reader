@@ -1,11 +1,11 @@
 [package]
 name = "xlsx_batch_reader"
-version = "0.1.5"
+version = "0.1.6"
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/sone92cn/xlsx_batch_reader"
 keywords = ["excel", "xlsx", "batch", "reader"]
-description = "An Excel file(xlsx/slsm) reader by batches, in pure Rust."
+description = "An Excel file(xlsx/xlsm) reader by batches, in pure Rust."
 
 [profile.dev]
 debug = 2           # 0-不输出任何 debug 信息;1-行信息;2-完整的 debug 信息
