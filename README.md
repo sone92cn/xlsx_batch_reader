@@ -195,9 +195,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 #### Fixed
 * fix project description
 
-### Fixed
-* unable to read the size of sheet 
-
 ### [0.1.5] - 2024.4.26
 #### Added
 * support read all data into memory when sheet created(fearure `cached` should be enabled)
