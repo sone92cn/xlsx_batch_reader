@@ -32,7 +32,7 @@ impl Timestamp {
     pub fn utc(&self) -> i64 {
         self.0
     }
-    /// use cell value as local datatime and get timestamp, the local time zone is determined by the time zone in which it was compiled
+    /// use cell value as local datatime and get timestamp, the local time zone is determined by the time zone in which it runs
     pub fn local(&self) -> i64 {
         self.0 - *LOCAL_OFFSET
     }

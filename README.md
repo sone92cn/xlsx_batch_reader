@@ -188,13 +188,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 
 # Todos
-- [ ] support to iter cached sheet by batch
+- [ ] get cell with extra info
 
 
 # Changelogs
-## [0.1.6] - 2024.4.26
+## [0.1.7] - 2024.4.27
+### Added
+* support to iter cached sheet by batches
+
 ### Fixed
-* project description
+* column_range return the first and last column number
 
 
 ## [0.1.5] - 2024.4.26

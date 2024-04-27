@@ -383,7 +383,7 @@ pub struct XlsxSheet<'a> {
 impl<'a> XlsxSheet<'a> {
     /// into cached sheet
     #[cfg(feature = "cached")]
-    pub fn into_cached_sheet(mut self) -> Result<CachedSheet<'a>> {
+    fn into_cached_sheet(mut self) -> Result<CachedSheet<'a>> {
         let (data, bottom_nrow) =  match self.get_next_row() {
             Ok(Some((r, d))) => {
                 let mut data = if let Some((rn, _)) = self.max_size {
@@ -422,12 +422,15 @@ impl<'a> XlsxSheet<'a> {
         } else {
             self.right_ncol
         };
+        let top_nrow = if self.first_row_is_header {self.skip_rows+2} else {self.skip_rows+1};
         Ok(CachedSheet {
             data,
             merged_rects,
             key: self.key,
-            _iter_batch: self.iter_batch,
-            top_nrow: if self.first_row_is_header {self.skip_rows+2} else {self.skip_rows+1},
+            current: top_nrow,
+            keep_empty: false,
+            iter_batch: self.iter_batch,
+            top_nrow,
             bottom_nrow,
             left_ncol: self.left_ncol + 1,
             right_ncol,
@@ -438,9 +441,9 @@ impl<'a> XlsxSheet<'a> {
     pub fn sheet_name(&self) -> &String {
         &self.key
     }
-    /// get column range
+    /// get column range, v0.1.7 the start column number included (start from 1)
     pub fn column_range(&self) -> (ColNum, ColNum) {
-        (self.left_ncol, self.right_ncol)
+        (self.left_ncol+1, self.right_ncol)
     }
     fn get_next_row(&mut self) -> Result<Option<(u32, Vec<CellValue<'a>>)>> {
         let mut col: ColNum = 0;
@@ -779,7 +782,9 @@ impl<'a> Iterator for XlsxSheet<'a> {
 pub struct CachedSheet<'a> {
     data: HashMap<RowNum, Vec<CellValue<'a>>>,
     key: String,
-    _iter_batch: usize,   ///  TODO iter cached sheet
+    current: RowNum,
+    keep_empty: bool,
+    iter_batch: usize,
     top_nrow: RowNum,
     bottom_nrow: RowNum,
     left_ncol: ColNum,
@@ -790,6 +795,11 @@ pub struct CachedSheet<'a> {
 
 #[cfg(feature = "cached")]
 impl <'a> CachedSheet<'a> {
+    /// not skip empty rows when iter (default: skip empty rows)
+    pub fn with_empty_rows(mut self) -> Self {
+        self.keep_empty = true;
+        self
+    }
     /// get sheet name
     pub fn sheet_name(&self) -> &String {
         &self.key
@@ -845,6 +855,26 @@ impl <'a> CachedSheet<'a> {
         } else {
             Err(anyhow!("Invalid address - out of range"))
         }
+    }
+}
+
+#[cfg(feature = "cached")]
+impl<'a> Iterator for CachedSheet<'a> {
+    type Item = (Vec<u32>, Vec<Vec<CellValue<'a>>>);
+    fn next(&mut self) -> Option<Self::Item> {
+        let mut nrow = Vec::with_capacity(self.iter_batch);
+        let mut data = Vec::with_capacity(self.iter_batch);
+        while nrow.len() < self.iter_batch && self.current <= self.bottom_nrow {
+            if self.data.contains_key(&self.current) {
+                nrow.push(self.current);
+                data.push(self.data[&self.current].to_owned());
+            } else if self.keep_empty {
+                nrow.push(self.current);
+                data.push(vec![]);
+            };
+            self.current += 1;
+        }
+        Some((nrow, data))
     }
 }
 
@@ -1245,4 +1275,5 @@ lazy_static! {
 
         map
     };
+    static ref EMP_CELLS: Vec<CellValue<'static>> = vec![];
 }
