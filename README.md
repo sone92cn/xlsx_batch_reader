@@ -192,47 +192,52 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 
 # Changelogs
-## [0.1.7] - 2024.4.27
-### Added
+### [0.1.8] - 2024.4.27
+#### Added
+* support xlsxwriter to append one row
+
+
+### [0.1.7] - 2024.4.27
+#### Added
 * support to iter cached sheet by batches
 
-### Fixed
+#### Fixed
 * column_range return the first and last column number
 
 
-## [0.1.5] - 2024.4.26
-### Added
+### [0.1.5] - 2024.4.26
+#### Added
 * support read all data into memory when sheet created(fearure `cached` should be enabled)
 
-### Fixed
+#### Fixed
 * unable to read the size of sheet 
 
 
-## [0.1.4] - 2024.4.15
-### Added
+### [0.1.4] - 2024.4.15
+#### Added
 * get cell value as timestamp
 
-### Changed
+#### Changed
 * Optimaze date&time recognition algorithm for better performance
 
 
-## [0.1.3] - 2024.4.14
-### Fixed
-* unable to use feature xlsxwrite
+### [0.1.3] - 2024.4.14
+#### Fixed
+* unable to use feature xlsxwriter
 
-## [0.1.2] - 2024.4.13
-### Added
+### [0.1.2] - 2024.4.13
+#### Added
 * get cell value as datetime and time
 
-### Changed
+#### Changed
 * output error message in English
 
 
-## [0.1.1] - 2024.4.13
-### Added
+### [0.1.1] - 2024.4.13
+#### Added
 * simple writer example
 
 
-## [0.1.0] - 2023.4.13
-### Added
+### [0.1.0] - 2023.4.13
+#### Added
 * first release
