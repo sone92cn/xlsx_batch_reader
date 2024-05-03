@@ -192,7 +192,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 
 # Changelogs
-### [0.1.8] - 2024.4.27
+### [0.1.8] - 2024.5.3
 #### Added
 * support xlsxwriter to append one row
 
