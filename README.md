@@ -184,7 +184,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 | Features | Description |
 | --- | --- |
 | `cached` | Enable cached xlsx sheet (read all sheet data into memory when created) |
-| `xlsxwriter` | Enable simple xlsx writer |
+| `xlsxwriter` | Enable simple xlsx writer（depends on rust_xlsxwriter crate） |
+| `full` | Enable feature cached and xlsxwriter |
 
 
 # Todos
@@ -192,6 +193,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 
 # Changelogs
+### [0.1.9] - 2024.5.5
+#### Added
+* add feature full and documnet full fetaures
+
+
 ### [0.1.8] - 2024.5.3
 #### Added
 * support xlsxwriter to append one row

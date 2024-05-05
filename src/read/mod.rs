@@ -795,9 +795,9 @@ pub struct CachedSheet<'a> {
 
 #[cfg(feature = "cached")]
 impl <'a> CachedSheet<'a> {
-    /// not skip empty rows when iter (default: skip empty rows)
-    pub fn with_empty_rows(mut self) -> Self {
-        self.keep_empty = true;
+    /// whether keep empty rows when iter (default: skip empty rows)
+    pub fn with_empty_rows(mut self, keep_empty: bool) -> Self {
+        self.keep_empty = keep_empty;
         self
     }
     /// get sheet name

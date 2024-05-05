@@ -1,10 +1,8 @@
 use std::{collections::HashMap, path::Path};
 use anyhow::{anyhow, Result};
-use rust_xlsxwriter::{Workbook, Worksheet, XlsxError, Format};
+use rust_xlsxwriter::{Workbook, Worksheet, XlsxError, Format, IntoExcelData};
 
 use crate::{CellValue, ColNum, RowNum};
-
-pub use rust_xlsxwriter::IntoExcelData;
 
 impl IntoExcelData for CellValue<'_> {
     fn write<'a>(
@@ -77,7 +75,7 @@ impl IntoExcelData for CellValue<'_> {
     }
 }
 
-struct Sheet{
+struct Sheet {
     sheet: Worksheet,
     nextrow: u32,
 }
@@ -103,7 +101,7 @@ impl Sheet {
     }
 }
 
-// xlsx_writer
+// simple xlsx writer
 pub struct XlsxWriter {
     names: Vec<String>,
     sheets: HashMap<String, Sheet>,
@@ -141,21 +139,22 @@ impl XlsxWriter {
             Err(anyhow!("cannot write saved workbook"))
         }
     }
-    /// append one row to sheet
-    /// name: sheet name, if not exists, create a new sheet
-    /// nrow: number write after the pre_cells and before the row_data (usually get from XLsxSheet)，not the row number of the target row
-    /// data: write after the head and the nrow
-    /// pre_cells: write at the head of the row
+    /// append one row to sheet   
+    /// name: sheet name, if not exists, create a new sheet   
+    /// nrow: number write after the pre_cells and before the row_data (usually get from XLsxSheet)，not the row number of the target row   
+    /// data: write after the head and the nrow   
+    /// pre_cells: write at the head of the row   
+    /// if you will call this function many times, it is better to use append_rows
     pub fn append_row<T: IntoExcelData, H: IntoExcelData+Clone>(&mut self, name: &str, nrow: Option<&RowNum>, data: Vec<T>, pre_cells: &Vec<H>)  -> Result<()> {
         let sheet = self.get_sheet_mut(name)?;
         sheet.write_row(pre_cells, nrow, data)?;
         Ok(())
     }
-    /// append many rows to sheet
-    /// name: sheet name, if not exists, create a new sheet
-    /// nrows: number write after the pre_cells and before the row_data (usually get from XLsxSheet)，not the row number of the target row
-    /// data: write after the head and the nrow
-    /// pre_cells: write at the head of the row
+    /// append many rows to sheet   
+    /// name: sheet name, if not exists, create a new sheet   
+    /// nrows: number write after the pre_cells and before the row_data (usually get from XLsxSheet)，not the row number of the target row   
+    /// data: write after the head and the nrow   
+    /// pre_cells: write at the head of the row   
     pub fn append_rows<T: IntoExcelData, H: IntoExcelData+Clone>(&mut self, name: &str, nrows: Vec<u32>, data: Vec<Vec<T>>, pre_cells: &Vec<H>) -> Result<()> {
         let sheet = self.get_sheet_mut(name)?;
         // 若nrows的长度为0，则不写行号
