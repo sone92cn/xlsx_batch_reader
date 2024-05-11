@@ -193,6 +193,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 
 # Changelogs
+### [0.1.11] - 2024.5.11
+#### Added
+* not full fetaures documnet
+
+
 ### [0.1.9] - 2024.5.5
 #### Added
 * add feature full and documnet full fetaures

@@ -1,6 +1,6 @@
 [package]
 name = "xlsx_batch_reader"
-version = "0.1.10"
+version = "0.1.11"
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/sone92cn/xlsx_batch_reader"
@@ -9,7 +9,8 @@ description = "An Excel file(xlsx/xlsm) reader by batches, in pure Rust."
 
 [package.metadata.docs.rs]
 all-features = true
-rustdoc-args = ["--no-deps", "--all-features"]
+rustdoc-args = ["--cfg", "docsrs"]
+features = ["cached", "xlsxwriter"]
 # cargo doc --no-deps --all-features
 # cargo publish --registry crates-io --all-features
 
