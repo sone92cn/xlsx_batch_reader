@@ -12,7 +12,7 @@ all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 features = ["cached", "xlsxwriter"]
 # cargo doc --no-deps --all-features
-# cargo publish --registry crates-io --all-features
+# cargo publish --registry crates-io
 
 [profile.dev]
 debug = 2           # 0-不输出任何 debug 信息;1-行信息;2-完整的 debug 信息
