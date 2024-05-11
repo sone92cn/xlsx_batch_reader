@@ -109,6 +109,7 @@ pub struct XlsxWriter {
 }
 
 impl XlsxWriter {
+    /// new xlsx writer
     pub fn new() -> Self {
         Self {
             names: vec![],

@@ -33,6 +33,7 @@ macro_rules! get_attr_val {
     };
 }
 
+/// xlsx book reader
 pub struct XlsxBook {
     ini_share: bool,
     str_share: Vec<String>,
@@ -362,6 +363,7 @@ impl XlsxBook {
     }
 }
 
+/// batch sheet reader
 pub struct XlsxSheet<'a> {
     key: String,
     str_share: &'a Vec<String>,
@@ -778,6 +780,7 @@ impl<'a> Iterator for XlsxSheet<'a> {
     }
 }
 
+/// cached sheet reader
 #[cfg(feature = "cached")]
 pub struct CachedSheet<'a> {
     data: HashMap<RowNum, Vec<CellValue<'a>>>,
