@@ -155,9 +155,9 @@ impl XlsxWriter {
     pub fn has_sheet(&self, shname: &String) -> bool {
         self.names.contains(shname)
     }
-    /// set columns, if you have many sheets call this for each sheet
-    /// shname: sheet name
-    /// columns: column names
+    /// set columns, if you have many sheets call this for each sheet   
+    /// shname: sheet name   
+    /// columns: column names   
     /// add_to_top: if true, the column names will be added to the top of the sheet
     pub fn with_columns(&mut self, shname: String, columns: Vec<String>, add_to_top: bool) {
         let mut maps = HashMap::with_capacity(columns.len());
@@ -216,8 +216,8 @@ impl XlsxWriter {
         };
         Ok(())
     }
-    /// append one row to sheet by column name 
-    /// name: sheet name, if not exists, create a new sheet   
+    /// append one row to sheet by column name    
+    /// name: sheet name, if not exists, create a new sheet    
     /// data: the data to write   
     pub fn append_row_by_name<T: IntoExcelData>(&mut self, name: &str, data: HashMap<String, T>) -> Result<()> {
         let sheet = self.get_sheet_mut(name)?;
@@ -225,8 +225,8 @@ impl XlsxWriter {
         Ok(())
     }
     
-    /// append many rows to sheet by column name 
-    /// name: sheet name, if not exists, create a new sheet   
+    /// append many rows to sheet by column name    
+    /// name: sheet name, if not exists, create a new sheet    
     /// data: the data to write   
     pub fn append_rows_by_name<T: IntoExcelData>(&mut self, name: &str, data: Vec<HashMap<String, T>>) -> Result<()> {
         let sheet = self.get_sheet_mut(name)?;
