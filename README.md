@@ -180,6 +180,28 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
+6. write row(s) by column name (feature xlsxwriter should be enabled)
+```rust
+use std::collections::HashMap;
+use xlsx_batch_reader::write::XlsxWriter;
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+
+    let mut writer = XlsxWriter::new();
+    // if you have many sheets call this for each sheet
+    writer.with_columns("Sheet1".to_string(), vec!["A".to_string(), "B".to_string(), "C".to_string(), "D".to_string()], true);
+
+    let row: HashMap<String, i32> = vec![("A".to_string(), 1), ("C".to_string(), 3)].into_iter().collect();
+    writer.append_row_by_name("Sheet1", row)?;
+    let row1: HashMap<String, &str> = vec![("A".to_string(), "A3"), ("B".to_string(), "B3"), ("D".to_string(), "D3")].into_iter().collect();
+    let row2: HashMap<String, &str> = vec![("B".to_string(), "B4"), ("C".to_string(), "C4")].into_iter().collect();
+    writer.append_rows_by_name("Sheet1", vec![row1, row2])?;
+
+    writer.save_as("xlsx/out.xlsx")?;
+    Ok(())
+}
+```
+
 # Features
 | Features | Description |
 | --- | --- |
@@ -191,64 +213,3 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 # Todos
 - [ ] get cell with extra info
 
-
-# Changelogs
-### [0.1.11] - 2024.5.11
-#### Fixed
-* not full fetaures documnet
-
-
-### [0.1.9] - 2024.5.5
-#### Added
-* add feature full and documnet full fetaures
-
-
-### [0.1.8] - 2024.5.3
-#### Added
-* support xlsxwriter to append one row
-
-
-### [0.1.7] - 2024.4.27
-#### Added
-* support to iter cached sheet by batches
-
-#### Fixed
-* column_range return the first and last column number
-
-
-### [0.1.5] - 2024.4.26
-#### Added
-* support read all data into memory when sheet created(fearure `cached` should be enabled)
-
-#### Fixed
-* unable to read the size of sheet 
-
-
-### [0.1.4] - 2024.4.15
-#### Added
-* get cell value as timestamp
-
-#### Changed
-* Optimaze date&time recognition algorithm for better performance
-
-
-### [0.1.3] - 2024.4.14
-#### Fixed
-* unable to use feature xlsxwriter
-
-### [0.1.2] - 2024.4.13
-#### Added
-* get cell value as datetime and time
-
-#### Changed
-* output error message in English
-
-
-### [0.1.1] - 2024.4.13
-#### Added
-* simple writer example
-
-
-### [0.1.0] - 2023.4.13
-#### Added
-* first release

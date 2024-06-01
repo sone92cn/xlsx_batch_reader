@@ -78,6 +78,7 @@ impl IntoExcelData for CellValue<'_> {
 struct Sheet {
     sheet: Worksheet,
     nextrow: u32,
+    columns: Option<HashMap<String, ColNum>>
 }
 
 impl Sheet {
@@ -99,13 +100,43 @@ impl Sheet {
         self.nextrow += 1;
         Ok(())
     }
+    #[inline]
+    fn write_row_by_name<T: IntoExcelData>(&mut self, row_data: HashMap<String, T>) -> Result<()> {
+        if let Some(columns) = &self.columns {
+            for (colname, colval) in row_data.into_iter() {
+                if let Some(colnum) = columns.get(&colname) {
+                    self.sheet.write(self.nextrow, *colnum, colval)?;
+                } else {
+                    return Err(anyhow!("column name {} not found", colname));
+                }
+            }
+            self.nextrow += 1;
+            Ok(())
+        } else {
+            Err(anyhow!("columns not set"))
+        }
+    }
+    #[inline]
+    fn write_columns(&mut self) -> Result<()> {
+        if let Some(columns) = &self.columns {
+            for (colval, colnum) in columns {
+                self.sheet.write(self.nextrow, *colnum, colval)?;
+            }
+            self.nextrow += 1;
+            Ok(())
+        } else {
+            Err(anyhow!("columns not set"))
+        }
+    }
 }
 
 // simple xlsx writer
 pub struct XlsxWriter {
     names: Vec<String>,
     sheets: HashMap<String, Sheet>,
-    opened: bool
+    opened: bool,
+    columns: HashMap<String, HashMap<String, ColNum>>,
+    prepends: HashMap<String, bool>
 }
 
 impl XlsxWriter {
@@ -115,12 +146,26 @@ impl XlsxWriter {
             names: vec![],
             sheets: HashMap::new(),
             opened: true,
+            columns: HashMap::new(),
+            prepends: HashMap::new()
         }
     }
     /// check whether the sheet exists
     #[inline]
     pub fn has_sheet(&self, shname: &String) -> bool {
         self.names.contains(shname)
+    }
+    /// set columns, if you have many sheets call this for each sheet
+    /// shname: sheet name
+    /// columns: column names
+    /// add_to_top: if true, the column names will be added to the top of the sheet
+    pub fn with_columns(&mut self, shname: String, columns: Vec<String>, add_to_top: bool) {
+        let mut maps = HashMap::with_capacity(columns.len());
+        for (i, colname) in columns.into_iter().enumerate() {
+            maps.insert(colname, i as ColNum);
+        }
+        self.columns.insert(shname.clone(), maps);
+        self.prepends.insert(shname, add_to_top);
     }
     /// get mutable sheet
     #[inline]
@@ -130,7 +175,11 @@ impl XlsxWriter {
                 let mut sht = Sheet {
                     nextrow: 0,
                     sheet: Worksheet::new(),
+                    columns: self.columns.remove(name)
                 };
+                if self.prepends.get(name) == Some(&true) {
+                    sht.write_columns()?;
+                }
                 sht.sheet.set_name(name)?;
                 self.sheets.insert(name.to_owned(), sht);
                 self.names.push(name.to_owned());
@@ -164,6 +213,25 @@ impl XlsxWriter {
         }
         for (i, rdata) in data.into_iter().enumerate() {
             sheet.write_row(pre_cells, nrows.get(i), rdata)?;
+        };
+        Ok(())
+    }
+    /// append one row to sheet by column name 
+    /// name: sheet name, if not exists, create a new sheet   
+    /// data: the data to write   
+    pub fn append_row_by_name<T: IntoExcelData>(&mut self, name: &str, data: HashMap<String, T>) -> Result<()> {
+        let sheet = self.get_sheet_mut(name)?;
+        sheet.write_row_by_name(data)?;
+        Ok(())
+    }
+    
+    /// append many rows to sheet by column name 
+    /// name: sheet name, if not exists, create a new sheet   
+    /// data: the data to write   
+    pub fn append_rows_by_name<T: IntoExcelData>(&mut self, name: &str, data: Vec<HashMap<String, T>>) -> Result<()> {
+        let sheet = self.get_sheet_mut(name)?;
+        for rdata in data.into_iter() {
+            sheet.write_row_by_name(rdata)?;
         };
         Ok(())
     }
