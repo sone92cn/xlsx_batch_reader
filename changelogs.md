@@ -1,5 +1,9 @@
 
 # Changelogs
+### [0.1.13] - 2024.6.1
+#### Changed
+* update dependency rust_xlsxwriter to the latest version
+
 ### [0.1.12] - 2024.6.1
 #### Added
 * write row(s) by column name instead of position
