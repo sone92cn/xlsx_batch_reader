@@ -1,7 +1,7 @@
 use std::{cmp::max, collections::HashMap, fs::File, io::BufReader, path::Path};
 use anyhow::{anyhow, Result};
 use zip::{ZipArchive, read::ZipFile};
-use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime};
+use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime, Timelike};
 use quick_xml::{reader::Reader, events::Event};
 
 use lazy_static::lazy_static;
@@ -1181,6 +1181,47 @@ impl FromCellValue for Timestamp {
             CellValue::Error(_) => Err(anyhow!(format!("invalid timestamp-{:?}", val))),
             CellValue::Bool(_) => Err(anyhow!(format!("invalid timestamp-{:?}", val))),
             CellValue::Blank => Ok(None),
+        }
+    }
+}
+
+/// make another type of data into cell value
+pub trait IntoCellValue {
+    fn try_into_cval(self) -> Result<CellValue<'static>>;
+}
+
+impl IntoCellValue for Date32 {
+    fn try_into_cval(self) -> Result<CellValue<'static>> {
+        Ok(CellValue::Date((self + 25569) as f64))
+    }
+}
+
+impl IntoCellValue for NaiveDate {
+    fn try_into_cval(self) -> Result<CellValue<'static>> {
+        Ok(CellValue::Date((self.signed_duration_since(*BASE_DATE).num_days()) as f64))
+    }
+}
+
+impl IntoCellValue for NaiveDateTime {
+    fn try_into_cval(self) -> Result<CellValue<'static>> {
+        let (dt, tm) = (self.date(), self.time());
+        Ok(CellValue::Datetime(((dt.signed_duration_since(*BASE_DATE).num_days()) as f64) + ((tm.num_seconds_from_midnight() as f64) / 86400.0)))
+    }
+}
+
+impl IntoCellValue for NaiveTime {
+    fn try_into_cval(self) -> Result<CellValue<'static>> {
+        Ok(CellValue::Time((self.num_seconds_from_midnight() as f64) / 86400.0))
+    }
+}
+
+// utc time-zone only
+impl IntoCellValue for Timestamp {
+    fn try_into_cval(self) -> Result<CellValue<'static>> {
+        if let Some(v) = BASE_DATETIME.checked_add_signed(Duration::seconds(self.0)) {
+            v.try_into_cval()
+        } else {
+            Ok(CellValue::Error(format!("Invalid Timestamp-{}", self.0)))
         }
     }
 }

@@ -1,6 +1,10 @@
 
 # Changelogs
 ### [0.1.13] - 2024.6.1
+#### Added
+* Add trait IntoCellValue and implement NaiveDate, NaiveDateTime, NaiveTime, Date32, Timestamp for it
+
+### [0.1.13] - 2024.6.1
 #### Changed
 * update dependency rust_xlsxwriter to the latest version
 
