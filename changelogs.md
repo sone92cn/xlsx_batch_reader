@@ -1,8 +1,12 @@
 
 # Changelogs
-### [0.1.13] - 2024.6.1
+### [0.2.0] - 2024.11.5
 #### Added
-* Add trait IntoCellValue and implement NaiveDate, NaiveDateTime, NaiveTime, Date32, Timestamp for it
+* support to read partial rows based on conditions
+
+### [0.1.14] - 2024.6.1
+#### Added
+* add trait IntoCellValue and implement NaiveDate, NaiveDateTime, NaiveTime, Date32, Timestamp for it
 
 ### [0.1.13] - 2024.6.1
 #### Changed

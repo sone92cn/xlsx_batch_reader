@@ -345,7 +345,9 @@ impl XlsxBook {
                             map_style: &self.map_style,
                             datetime_fmts: &self.datetime_fmts,
                             max_size: None,
-                            merged_rects: None
+                            merged_rects: None,
+                            skip_until: None,
+                            read_before: None,
                         });
                     },
                     Err(_) => {
@@ -379,7 +381,9 @@ pub struct XlsxSheet<'a> {
     first_row_is_header: bool,
     first_row: Option<(u32, Vec<CellValue<'a>>)>,
     datetime_fmts: &'a HashMap<u32, u8>,
-    merged_rects: Option<Vec<((RowNum, ColNum), (RowNum, ColNum))>>
+    merged_rects: Option<Vec<((RowNum, ColNum), (RowNum, ColNum))>>,
+    skip_until: Option<HashMap<usize, String>>,
+    read_before: Option<HashMap<usize, String>>
 }
 
 impl<'a> XlsxSheet<'a> {
@@ -443,11 +447,57 @@ impl<'a> XlsxSheet<'a> {
     pub fn sheet_name(&self) -> &String {
         &self.key
     }
+    /// skip until a row matched，this function should be called before reading(the matched row will be included)   
+    pub fn with_skip_until(&mut self, checks: &HashMap<String, String>) {
+        let mut maps = HashMap::new();
+        for (c, v) in checks {
+            let col = get_num_from_ord(c.as_bytes()).unwrap_or(0);
+            if col > self.left_ncol && col <= self.right_ncol {
+                maps.insert((col-self.left_ncol-1) as usize, v.clone());
+            }
+        }
+        if maps.len() > 0 {
+            self.skip_until = Some(maps);
+        } else {
+            self.skip_until = None;
+        }
+    }
+    /// read before a row matched，this function should be called before reading(the matched row will not be included)
+    pub fn with_read_before(&mut self, checks: &HashMap<String, String>) {
+        let mut maps = HashMap::new();
+        for (c, v) in checks {
+            let col = get_num_from_ord(c.as_bytes()).unwrap_or(0);
+            if col > self.left_ncol && col <= self.right_ncol {
+                maps.insert((col-self.left_ncol-1) as usize, v.clone());
+            }
+        }
+        if maps.len() > 0 {
+            self.read_before = Some(maps);
+        } else {
+            self.read_before = Some(maps);
+        }
+    }
     /// get column range, v0.1.7 the start column number included (start from 1)
     pub fn column_range(&self) -> (ColNum, ColNum) {
         (self.left_ncol+1, self.right_ncol)
     }
     fn get_next_row(&mut self) -> Result<Option<(u32, Vec<CellValue<'a>>)>> {
+        fn is_matched_row(row: &Vec<CellValue<'_>>, checks: &HashMap<usize, String>) -> bool {
+            for (i, v) in checks {
+                if let Some(cell) = row.get(*i) {
+                    if let Ok(Some(s)) = cell.get::<String>() {
+                        if s != *v {
+                            return false
+                        }
+                    } else {
+                        return false;
+                    }
+                } else {
+                    return false;
+                }
+            }
+            true
+        }
         let mut col: ColNum = 0;
         let mut cell_type: Vec<u8> = Vec::new();
         let mut prev_head: Vec<u8> = Vec::new();
@@ -582,6 +632,26 @@ impl<'a> XlsxSheet<'a> {
                 Ok(Event::End(ref e)) => {
                     // 0-closed; 1-new; 2-active;
                     if (e.name().as_ref() == b"row") && self.status > 1 && row_value.len() > 0 {
+                        if let Some(skip_until) = &self.skip_until {
+                            if is_matched_row(&row_value, skip_until) {
+                                self.skip_until = None;
+                            } else {
+                                col = 0;
+                                cell_type = Vec::new();
+                                prev_head = Vec::new();
+                                row_num = 0;
+                                col_index = 1;    // 当前需增加cell的col_index
+                                row_value = Vec::new();
+                                num_fmt_id = 0;
+                                continue;
+                            }   //  读取到初始行前继续读取
+                        } else if let Some(read_before) = &self.read_before {
+                            if is_matched_row(&row_value, read_before) {
+                                self.status = 0; 
+                                self.read_before = None;
+                                break Ok(None);
+                            }  //  读取到结尾行后不再继续读取，且抛弃结尾行
+                        }
                         if self.right_ncol != MAX_COL_NUM {
                             while row_value.len() < row_value.capacity() {
                                 row_value.push(CellValue::Blank);
