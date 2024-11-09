@@ -5,7 +5,7 @@ use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime, Timelike};
 use quick_xml::{reader::Reader, events::Event};
 
 use lazy_static::lazy_static;
-use crate::{get_num_from_ord, get_tuple_from_ord, CellValue, ColNum, Date32, MergedRange, RowNum, Timestamp, MAX_COL_NUM};
+use crate::{get_num_from_ord, get_tuple_from_ord, CellValue, ColNum, Date32, MergedRange, RowNum, Timesecond, Timestamp, MAX_COL_NUM};
 
 #[cfg(feature = "cached")]
 use crate::is_merged_cell;
@@ -1255,6 +1255,50 @@ impl FromCellValue for Timestamp {
     }
 }
 
+impl FromCellValue for Timesecond {
+    fn try_from_cval(val: &CellValue<'_>) -> Result<Option<Self>> {
+        match val {
+            CellValue::Number(n) => {
+                Ok(Some((((*n-n.trunc()) * 86400.0) as i32).into()))
+            },
+            CellValue::Date(n) => {
+                Ok(Some((((*n-n.trunc()) * 86400.0) as i32).into()))
+            },
+            CellValue::Time(n) => {
+                Ok(Some((((*n-n.trunc()) * 86400.0) as i32).into()))
+            },
+            CellValue::Datetime(n) => {
+                Ok(Some((((*n-n.trunc()) * 86400.0) as i32).into()))
+            },
+            CellValue::Shared(s) => {
+                match NaiveTime::parse_from_str(*s, "%H:%M:%S") {
+                    Ok(v) => {Ok(Some((v.num_seconds_from_midnight() as i32).into()))},
+                    Err(_) => {
+                        match NaiveTime::parse_from_str(*s, "%H:%M:%S") {
+                            Ok(v) =>Ok(Some((v.num_seconds_from_midnight() as i32).into())),
+                            Err(_) => {Err(anyhow!(format!("invalid time-{:?}", val)))}
+                        }
+                    }
+                }
+            },
+            CellValue::String(s) => {
+                match NaiveTime::parse_from_str(s, "%H:%M:%S") {
+                    Ok(v) => {Ok(Some((v.num_seconds_from_midnight() as i32).into()))},
+                    Err(_) => {
+                        match NaiveTime::parse_from_str(s, "%H:%M:%S") {
+                            Ok(v) =>Ok(Some((v.num_seconds_from_midnight() as i32).into())),
+                            Err(_) => {Err(anyhow!(format!("invalid time-{:?}", val)))}
+                        }
+                    }
+                }
+            },
+            CellValue::Error(_) => Err(anyhow!(format!("invalid time{:?}", val))),
+            CellValue::Bool(_) => Err(anyhow!(format!("invalid time{:?}", val))),
+            CellValue::Blank => Ok(None),
+        }
+    }
+}
+
 /// Into CellValue
 impl Into<CellValue<'_>> for String {
     fn into(self) -> CellValue<'static> {
@@ -1304,6 +1348,12 @@ impl IntoCellValue for NaiveTime {
     }
 }
 
+impl IntoCellValue for Date32 {
+    fn try_into_cval(self) -> Result<CellValue<'static>> {
+        Ok(CellValue::Date((self + 25569) as f64))
+    }
+}
+
 // utc time-zone only
 impl IntoCellValue for Timestamp {
     fn try_into_cval(self) -> Result<CellValue<'static>> {
@@ -1315,9 +1365,9 @@ impl IntoCellValue for Timestamp {
     }
 }
 
-impl IntoCellValue for Date32 {
+impl IntoCellValue for Timesecond {
     fn try_into_cval(self) -> Result<CellValue<'static>> {
-        Ok(CellValue::Date((self + 25569) as f64))
+        Ok(CellValue::Time(self.0 as f64 / 86400.0))
     }
 }
 
@@ -1330,6 +1380,7 @@ static FMT_DEFAULT: u8 = 255;
 lazy_static! {
     static ref BASE_DATE: NaiveDate = NaiveDate::from_ymd_opt(1899, 12,30).unwrap();
     static ref BASE_DATETIME: NaiveDateTime = BASE_DATE.and_hms_opt(0, 0, 0).unwrap();
+    static ref BASE_TIME: NaiveTime = NaiveTime::from_num_seconds_from_midnight_opt(0, 0).unwrap();
     static ref UNIX_DATE: NaiveDate = NaiveDate::from_ymd_opt(1970,  1, 1).unwrap();
     static ref DATETIME_FMTS: HashMap<u32, u8> = {
         let mut v = HashMap::new();

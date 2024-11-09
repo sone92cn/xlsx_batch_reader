@@ -10,11 +10,14 @@ pub mod read;
 #[cfg(feature = "xlsxwriter")]
 pub mod write;
 
+/// days since UNIX epoch
+pub type Date32 = i32;  
 /// seconds since UNIX epoch
 #[derive(Debug)]
 pub struct Timestamp(i64);
-/// days since UNIX epoch
-pub type Date32 = i32;  
+/// seconds since midnight
+#[derive(Debug)]
+pub struct Timesecond(i32);
 /// row number
 pub type RowNum = u32;
 /// column number
@@ -49,6 +52,20 @@ impl Into<Timestamp> for i64 {
 impl Into<Timestamp> for f64 {
     fn into(self) -> Timestamp {
         Timestamp(self as i64)
+    }
+}
+
+// i32 into Timesecond
+impl Into<Timesecond> for i32 {
+    fn into(self) -> Timesecond {
+        Timesecond(self)
+    }
+}
+
+// Timesecond into i32
+impl From<Timesecond> for i32 {
+    fn from(ts: Timesecond) -> i32 {
+        ts.0
     }
 }
 

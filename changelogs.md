@@ -1,5 +1,9 @@
 
 # Changelogs
+### [0.2.2] - 2024.11.9
+#### Added
+* add data type Timesecond(seconds since midnight)
+
 ### [0.2.1] - 2024.11.9
 #### Fixed
 * unable to read data if skip_until is an empty hashmap
