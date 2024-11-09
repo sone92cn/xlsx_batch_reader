@@ -1,5 +1,9 @@
 
 # Changelogs
+### [0.2.1] - 2024.11.9
+#### Fixed
+* unable to read data if skip_until is an empty hashmap
+
 ### [0.2.0] - 2024.11.5
 #### Added
 * support to read partial rows based on conditions

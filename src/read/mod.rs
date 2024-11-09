@@ -474,7 +474,7 @@ impl<'a> XlsxSheet<'a> {
         if maps.len() > 0 {
             self.read_before = Some(maps);
         } else {
-            self.read_before = Some(maps);
+            self.read_before = None;
         }
     }
     /// get column range, v0.1.7 the start column number included (start from 1)
@@ -1255,15 +1255,34 @@ impl FromCellValue for Timestamp {
     }
 }
 
+/// Into CellValue
+impl Into<CellValue<'_>> for String {
+    fn into(self) -> CellValue<'static> {
+        CellValue::String(self)
+    }
+}
+
+impl Into<CellValue<'_>> for f64 {
+    fn into(self) -> CellValue<'static> {
+        CellValue::Number(self)
+    }
+}
+
+impl Into<CellValue<'_>> for i64 {
+    fn into(self) -> CellValue<'static> {
+        CellValue::Number(self as f64)
+    }
+}
+
+impl Into<CellValue<'_>> for bool {
+    fn into(self) -> CellValue<'static> {
+        CellValue::Bool(self)
+    }
+}
+
 /// make another type of data into cell value
 pub trait IntoCellValue {
     fn try_into_cval(self) -> Result<CellValue<'static>>;
-}
-
-impl IntoCellValue for Date32 {
-    fn try_into_cval(self) -> Result<CellValue<'static>> {
-        Ok(CellValue::Date((self + 25569) as f64))
-    }
 }
 
 impl IntoCellValue for NaiveDate {
@@ -1293,6 +1312,12 @@ impl IntoCellValue for Timestamp {
         } else {
             Ok(CellValue::Error(format!("Invalid Timestamp-{}", self.0)))
         }
+    }
+}
+
+impl IntoCellValue for Date32 {
+    fn try_into_cval(self) -> Result<CellValue<'static>> {
+        Ok(CellValue::Date((self + 25569) as f64))
     }
 }
 
