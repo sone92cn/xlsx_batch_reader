@@ -19,6 +19,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         sheet.with_read_before(&read_before);
         // only rows after skip_until-row(included) and before read_before(excluded) will be returned
 
+        let captures = vec!["B2".into(), "C1".into()].into_iter().collect();
+        sheet.with_capture_vals(captures);
+        println!("captures: {:?}", sheet.get_captured_vals());
+
         for batch in sheet {
             let (rows_nums, rows_data) = batch?;
             // empty rows will be skiped
@@ -28,7 +32,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("the value of {} is {val}; raw cell is {:?}", get_ord_from_tuple(row, (col+1) as u16)?, cel);  
                 }
             }
+            // println!("captured values: {:?}", sheet.get_captured_vals());
         };
+
     }
     Ok(())
 }

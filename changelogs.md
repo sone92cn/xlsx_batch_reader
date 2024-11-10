@@ -1,5 +1,9 @@
 
 # Changelogs
+### [0.2.3] - 2024.11.10
+#### Added
+* add with_capture_vals and get_captured_vals to XlsxSheet
+
 ### [0.2.2] - 2024.11.9
 #### Added
 * add data type Timesecond(seconds since midnight)

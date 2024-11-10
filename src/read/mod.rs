@@ -1,8 +1,8 @@
-use std::{cmp::max, collections::HashMap, fs::File, io::BufReader, path::Path};
+use std::{cmp::max, collections::{HashMap, HashSet}, fs::File, io::BufReader, path::Path};
 use anyhow::{anyhow, Result};
 use zip::{ZipArchive, read::ZipFile};
 use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime, Timelike};
-use quick_xml::{reader::Reader, events::Event};
+use quick_xml::{events::Event, reader::Reader};
 
 use lazy_static::lazy_static;
 use crate::{get_num_from_ord, get_tuple_from_ord, CellValue, ColNum, Date32, MergedRange, RowNum, Timesecond, Timestamp, MAX_COL_NUM};
@@ -348,6 +348,8 @@ impl XlsxBook {
                             merged_rects: None,
                             skip_until: None,
                             read_before: None,
+                            addr_captures: None,
+                            vals_captures: HashMap::new(),
                         });
                     },
                     Err(_) => {
@@ -383,7 +385,9 @@ pub struct XlsxSheet<'a> {
     datetime_fmts: &'a HashMap<u32, u8>,
     merged_rects: Option<Vec<((RowNum, ColNum), (RowNum, ColNum))>>,
     skip_until: Option<HashMap<usize, String>>,
-    read_before: Option<HashMap<usize, String>>
+    read_before: Option<HashMap<usize, String>>,
+    addr_captures: Option<HashSet<String>>,
+    vals_captures: HashMap<String, CellValue<'a>>
 }
 
 impl<'a> XlsxSheet<'a> {
@@ -477,10 +481,34 @@ impl<'a> XlsxSheet<'a> {
             self.read_before = None;
         }
     }
+    /// capture values by address
+    pub fn with_capture_vals(&mut self, captures: HashSet<String>) {
+        if captures.len() > 0 {
+            self.addr_captures = Some(captures);
+        } else {
+            self.addr_captures = None;
+        };
+        self.vals_captures = HashMap::new();
+    }
+    /// get cell captured values,  required:   
+    /// 1. with_capture_vals must be called before this function    
+    /// 2. first_row_is_header must be true     
+    /// 3. the captured values must be after skip_rows(excluded, passed to get_sheet_by_name) and before header row(included)
+    pub fn get_captured_vals(&mut self) -> Result<&HashMap<String, CellValue<'a>>> {
+        if self.addr_captures.is_none() {
+            Ok(&self.vals_captures)
+        } else if self.first_row_is_header {
+            self.get_header_row()?;
+            Ok(&self.vals_captures)
+        } else {
+            Err(anyhow!("get_captured_vals error: first_row_is_header must be true"))
+        }
+    }
     /// get column range, v0.1.7 the start column number included (start from 1)
     pub fn column_range(&self) -> (ColNum, ColNum) {
         (self.left_ncol+1, self.right_ncol)
     }
+    /// get next row
     fn get_next_row(&mut self) -> Result<Option<(u32, Vec<CellValue<'a>>)>> {
         fn is_matched_row(row: &Vec<CellValue<'_>>, checks: &HashMap<usize, String>) -> bool {
             for (i, v) in checks {
@@ -499,10 +527,11 @@ impl<'a> XlsxSheet<'a> {
             true
         }
         let mut col: ColNum = 0;
-        let mut cell_type: Vec<u8> = Vec::new();
-        let mut prev_head: Vec<u8> = Vec::new();
-        let mut row_num: u32 = 0;
+        let mut cell_addr = "".into();
+        let mut cell_type = vec![];
+        let mut prev_head = vec![];
         let mut col_index: ColNum = 1;    // 当前需增加cell的col_index
+        let mut row_num: u32 = 0;
         let mut row_value: Vec<CellValue<'_>> = Vec::new();
         let mut num_fmt_id: u32 = 0;
         if self.status == 0 {
@@ -545,7 +574,8 @@ impl<'a> XlsxSheet<'a> {
                                     num_fmt_id = 0;
                                 }
                             };
-                            col = get_num_from_ord(get_attr_val!(e, "r").as_bytes()).unwrap_or(0);
+                            cell_addr = get_attr_val!(e, "r").to_string();   //  单元格地址
+                            col = get_num_from_ord(cell_addr.as_bytes()).unwrap_or(0);
                             
                             if row_num > self.skip_rows && col > self.left_ncol && col <= self.right_ncol {
                                 self.status = 3;   // 3-get_cell; 4-skip_cell;
@@ -566,6 +596,7 @@ impl<'a> XlsxSheet<'a> {
                                 }
                             } - self.left_ncol;
                             row_value = Vec::with_capacity(cap.into());
+                            col_index = 1;         // 当前需增加cell的col_index
                             // row_value.push(CellValue::Number(row_num as f64));  // 行号单独返回
                         }; 
                     };
@@ -593,40 +624,47 @@ impl<'a> XlsxSheet<'a> {
                             row_value.push(CellValue::Blank);
                             col_index += 1;
                         }
-                        if cell_type == b"inlineStr" && prev_head == b"t" {
-                            row_value.push(CellValue::String(t.unescape()?.to_string()));
-                            col_index += 1;
+                        let cel_val = if cell_type == b"inlineStr" && prev_head == b"t" {
+                            CellValue::String(t.unescape()?.to_string())
                         } else if prev_head == b"v" {
                             if cell_type == b"s" {
-                                row_value.push(CellValue::Shared(&self.str_share[String::from_utf8(t.to_vec())?.parse::<usize>()?]));
+                                CellValue::Shared(&self.str_share[String::from_utf8(t.to_vec())?.parse::<usize>()?])
                             } else if cell_type == b"n" {
                                 let fmt = self.datetime_fmts.get(&num_fmt_id).unwrap_or(&FMT_DEFAULT);
                                 if *fmt == FMT_DATE {
-                                    row_value.push(CellValue::Date(String::from_utf8(t.to_vec())?.parse::<f64>()?));
+                                    CellValue::Date(String::from_utf8(t.to_vec())?.parse::<f64>()?)
                                 } else if *fmt == FMT_DATETIME {
-                                    row_value.push(CellValue::Datetime(String::from_utf8(t.to_vec())?.parse::<f64>()?));
+                                    CellValue::Datetime(String::from_utf8(t.to_vec())?.parse::<f64>()?)
                                 } else if *fmt == FMT_TIME {
-                                    row_value.push(CellValue::Time(String::from_utf8(t.to_vec())?.parse::<f64>()?));
+                                    CellValue::Time(String::from_utf8(t.to_vec())?.parse::<f64>()?)
                                 } else {
-                                    row_value.push(CellValue::Number(String::from_utf8(t.to_vec())?.parse::<f64>()?));
-                                };
+                                    CellValue::Number(String::from_utf8(t.to_vec())?.parse::<f64>()?)
+                                }
                             } else if cell_type == b"b" {
                                 if String::from_utf8(t.to_vec())?.parse::<usize>() == Ok(1) {
-                                    row_value.push(CellValue::Bool(true));
+                                    CellValue::Bool(true)
                                 } else {
-                                    row_value.push(CellValue::Bool(false));
-                                };
+                                    CellValue::Bool(false)
+                                }
                             } else if cell_type == b"d" {
-                                row_value.push(CellValue::String(String::from_utf8(t.to_vec())?));
+                                CellValue::String(String::from_utf8(t.to_vec())?)
                             } else if cell_type == b"e" {
-                                row_value.push(CellValue::Error(String::from_utf8(t.to_vec())?));
+                                CellValue::Error(String::from_utf8(t.to_vec())?)
                             } else if cell_type == b"str" {
-                                row_value.push(CellValue::String(t.unescape()?.to_string()));
+                                CellValue::String(t.unescape()?.to_string())
                             } else{
-                                row_value.push(CellValue::Blank);
+                                CellValue::Blank
                             }
-                            col_index += 1;
+                        } else {
+                            CellValue::Error("Unknown cell type".into())
+                        };
+                        if let Some(addrs) = &mut self.addr_captures {
+                            if let Some(key) = addrs.take(&cell_addr) {
+                                self.vals_captures.insert(key, cel_val.clone());
+                            }
                         }
+                        col_index += 1;
+                        row_value.push(cel_val);
                     }
                 },
                 Ok(Event::End(ref e)) => {
@@ -636,13 +674,13 @@ impl<'a> XlsxSheet<'a> {
                             if is_matched_row(&row_value, skip_until) {
                                 self.skip_until = None;
                             } else {
-                                col = 0;
-                                cell_type = Vec::new();
-                                prev_head = Vec::new();
-                                row_num = 0;
-                                col_index = 1;    // 当前需增加cell的col_index
-                                row_value = Vec::new();
-                                num_fmt_id = 0;
+                                // col = 0;   //  reset each cell
+                                // cell_type = Vec::new();   // reset each cell
+                                // num_fmt_id = 0;   // reset each cell
+                                // prev_head = Vec::new();    reset each tag
+                                // col_index = 1;    // 当前需增加cell的col_index  // reset each row
+                                // row_num = 0;       //  reset each row
+                                // row_value = Vec::new();    // reset each row
                                 continue;
                             }   //  读取到初始行前继续读取
                         } else if let Some(read_before) = &self.read_before {
@@ -657,6 +695,7 @@ impl<'a> XlsxSheet<'a> {
                                 row_value.push(CellValue::Blank);
                             };
                         }
+                        self.addr_captures = None;    //  返回首行时，不再匹配captures
                         break Ok(Some((row_num, row_value)))
                     }else if e.name().as_ref() == b"sheetData" {
                         self.status = 0; 
