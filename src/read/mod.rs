@@ -1028,13 +1028,25 @@ impl FromCellValue for f64 {
             CellValue::Shared(s) => {
                 match s.parse::<f64>() {
                     Ok(n) => Ok(Some(n)),
-                    Err(_) => Err(anyhow!(format!("invalid value-{:?}", val)))
+                    Err(_) => {
+                        if NULL_STRING.contains(*s) {
+                            Ok(None)
+                        } else {
+                            Err(anyhow!(format!("invalid value-{:?}", val)))
+                        }
+                    }
                 }
             },
             CellValue::String(s) => {
                 match s.parse::<f64>() {
                     Ok(n) => Ok(Some(n)),
-                    Err(_) => Err(anyhow!(format!("invalid value-{:?}", val)))
+                    Err(_) => {
+                        if NULL_STRING.contains(s) {
+                            Ok(None)
+                        } else {
+                            Err(anyhow!(format!("invalid value-{:?}", val)))
+                        }
+                    }
                 }
             },
             CellValue::Error(_) => Err(anyhow!(format!("invalid value-{:?}", val))),
@@ -1054,13 +1066,25 @@ impl FromCellValue for i64 {
             CellValue::Shared(s) => {
                 match s.parse::<i64>() {
                     Ok(n) => Ok(Some(n)),
-                    Err(_) => Err(anyhow!(format!("invalid value-{:?}", val)))
+                    Err(_) => {
+                        if NULL_STRING.contains(*s) {
+                            Ok(None)
+                        } else {
+                            Err(anyhow!(format!("invalid value-{:?}", val)))
+                        }
+                    }
                 }
             },
             CellValue::String(s) => {
                 match s.parse::<i64>() {
                     Ok(n) => Ok(Some(n)),
-                    Err(_) => Err(anyhow!(format!("invalid value-{:?}", val)))
+                    Err(_) => {
+                        if NULL_STRING.contains(s) {
+                            Ok(None)
+                        } else {
+                            Err(anyhow!(format!("invalid value-{:?}", val)))
+                        }
+                    }
                 }
             },
             CellValue::Error(_) => Err(anyhow!(format!("invalid value-{:?}", val))),
@@ -1080,13 +1104,25 @@ impl FromCellValue for bool {
             CellValue::Shared(s) => {
                 match s.parse::<bool>() {
                     Ok(n) => Ok(Some(n)),
-                    Err(_) => Err(anyhow!(format!("invalid value-{:?}", val)))
+                    Err(_) => {
+                        if NULL_STRING.contains(*s) {
+                            Ok(None)
+                        } else {
+                            Err(anyhow!(format!("invalid value-{:?}", val)))
+                        }
+                    }
                 }
             },
             CellValue::String(s) => {
                 match s.parse::<bool>() {
                     Ok(n) => Ok(Some(n)),
-                    Err(_) => Err(anyhow!(format!("invalid value-{:?}", val)))
+                    Err(_) => {
+                        if NULL_STRING.contains(s) {
+                            Ok(None)
+                        } else {
+                            Err(anyhow!(format!("invalid value-{:?}", val)))
+                        }
+                    }
                 }
             },
             CellValue::Error(_) => Err(anyhow!(format!("invalid value-{:?}", val))),
@@ -1109,7 +1145,13 @@ impl FromCellValue for NaiveDate {
                     Err(_) => {
                         match NaiveDate::parse_from_str(*s, "%Y/%m/%d") {
                             Ok(v) => Ok(Some(v)),
-                            Err(_) => {Err(anyhow!(format!("invalid datetime-{:?}", val)))}
+                            Err(_) => {
+                                if NULL_STRING.contains(*s) {
+                                    Ok(None)
+                                } else {
+                                    Err(anyhow!(format!("invalid value-{:?}", val)))
+                                }
+                            }
                         }
                     }
                 }
@@ -1120,7 +1162,13 @@ impl FromCellValue for NaiveDate {
                     Err(_) => {
                         match NaiveDate::parse_from_str(s, "%Y/%m/%d") {
                             Ok(v) => Ok(Some(v)),
-                            Err(_) => {Err(anyhow!(format!("invalid datetime{:?}", val)))}
+                            Err(_) => {
+                                if NULL_STRING.contains(s) {
+                                    Ok(None)
+                                } else {
+                                    Err(anyhow!(format!("invalid value-{:?}", val)))
+                                }
+                            }
                         }
                     }
                 }
@@ -1153,7 +1201,13 @@ impl FromCellValue for NaiveDateTime {
                     Err(_) => {
                         match NaiveDateTime::parse_from_str(*s, "%Y/%m/%d %H:%M:%S") {
                             Ok(v) => Ok(Some(v)),
-                            Err(_) => {Err(anyhow!(format!("invalid datetime-{:?}", val)))}
+                            Err(_) => {
+                                if NULL_STRING.contains(*s) {
+                                    Ok(None)
+                                } else {
+                                    Err(anyhow!(format!("invalid value-{:?}", val)))
+                                }
+                            }
                         }
                     }
                 }
@@ -1164,7 +1218,13 @@ impl FromCellValue for NaiveDateTime {
                     Err(_) => {
                         match NaiveDateTime::parse_from_str(s, "%Y/%m/%d %H:%M:%S") {
                             Ok(v) => Ok(Some(v)),
-                            Err(_) => {Err(anyhow!(format!("invalid datetime{:?}", val)))}
+                            Err(_) => {
+                                if NULL_STRING.contains(s) {
+                                    Ok(None)
+                                } else {
+                                    Err(anyhow!(format!("invalid value-{:?}", val)))
+                                }
+                            }
                         }
                     }
                 }
@@ -1197,7 +1257,13 @@ impl FromCellValue for NaiveTime {
                     Err(_) => {
                         match NaiveTime::parse_from_str(*s, "%H:%M:%S") {
                             Ok(v) => Ok(Some(v)),
-                            Err(_) => {Err(anyhow!(format!("invalid time-{:?}", val)))}
+                            Err(_) => {
+                                if NULL_STRING.contains(*s) {
+                                    Ok(None)
+                                } else {
+                                    Err(anyhow!(format!("invalid value-{:?}", val)))
+                                }
+                            }
                         }
                     }
                 }
@@ -1208,7 +1274,13 @@ impl FromCellValue for NaiveTime {
                     Err(_) => {
                         match NaiveTime::parse_from_str(s, "%H:%M:%S") {
                             Ok(v) => Ok(Some(v)),
-                            Err(_) => {Err(anyhow!(format!("invalid time{:?}", val)))}
+                            Err(_) => {
+                                if NULL_STRING.contains(s) {
+                                    Ok(None)
+                                } else {
+                                    Err(anyhow!(format!("invalid value-{:?}", val)))
+                                }
+                            }
                         }
                     }
                 }
@@ -1234,7 +1306,13 @@ impl FromCellValue for Date32 {
                     Err(_) => {
                         match NaiveDate::parse_from_str(*s, "%Y/%m/%d") {
                             Ok(v) => Ok(Some((v - UNIX_DATE.clone()).num_days() as i32)),
-                            Err(_) => {Err(anyhow!(format!("invalid date32-{:?}", val)))}
+                            Err(_) => {
+                                if NULL_STRING.contains(*s) {
+                                    Ok(None)
+                                } else {
+                                    Err(anyhow!(format!("invalid value-{:?}", val)))
+                                }
+                            }
                         }
                     }
                 }
@@ -1245,7 +1323,13 @@ impl FromCellValue for Date32 {
                     Err(_) => {
                         match NaiveDate::parse_from_str(s, "%Y/%m/%d") {
                             Ok(v) => Ok(Some((v - UNIX_DATE.clone()).num_days() as i32)),
-                            Err(_) => {Err(anyhow!(format!("invalid date32-{:?}", val)))}
+                            Err(_) => {
+                                if NULL_STRING.contains(s) {
+                                    Ok(None)
+                                } else {
+                                    Err(anyhow!(format!("invalid value-{:?}", val)))
+                                }
+                            }
                         }
                     }
                 }
@@ -1271,7 +1355,13 @@ impl FromCellValue for Timestamp {
                     Err(_) => {
                         match NaiveDateTime::parse_from_str(*s, "%Y-%m-%d %H:%M:%S") {
                             Ok(v) => Ok(Some(v.and_utc().timestamp().into())),
-                            Err(_) => {Err(anyhow!(format!("invalid timestamp-{:?}", val)))}
+                            Err(_) => {
+                                if NULL_STRING.contains(*s) {
+                                    Ok(None)
+                                } else {
+                                    Err(anyhow!(format!("invalid value-{:?}", val)))
+                                }
+                            }
                         }
                     }
                 }
@@ -1282,7 +1372,13 @@ impl FromCellValue for Timestamp {
                     Err(_) => {
                         match NaiveDateTime::parse_from_str(s, "%Y/%m/%d %H:%M:%S") {
                             Ok(v) => Ok(Some(v.and_utc().timestamp().into())),
-                            Err(_) => {Err(anyhow!(format!("invalid timestamp-{:?}", val)))}
+                            Err(_) => {
+                                if NULL_STRING.contains(s) {
+                                    Ok(None)
+                                } else {
+                                    Err(anyhow!(format!("invalid value-{:?}", val)))
+                                }
+                            }
                         }
                     }
                 }
@@ -1315,7 +1411,13 @@ impl FromCellValue for Timesecond {
                     Err(_) => {
                         match NaiveTime::parse_from_str(*s, "%H:%M:%S") {
                             Ok(v) =>Ok(Some((v.num_seconds_from_midnight() as i32).into())),
-                            Err(_) => {Err(anyhow!(format!("invalid time-{:?}", val)))}
+                            Err(_) => {
+                                if NULL_STRING.contains(*s) {
+                                    Ok(None)
+                                } else {
+                                    Err(anyhow!(format!("invalid value-{:?}", val)))
+                                }
+                            }
                         }
                     }
                 }
@@ -1326,7 +1428,13 @@ impl FromCellValue for Timesecond {
                     Err(_) => {
                         match NaiveTime::parse_from_str(s, "%H:%M:%S") {
                             Ok(v) =>Ok(Some((v.num_seconds_from_midnight() as i32).into())),
-                            Err(_) => {Err(anyhow!(format!("invalid time-{:?}", val)))}
+                            Err(_) => {
+                                if NULL_STRING.contains(s) {
+                                    Ok(None)
+                                } else {
+                                    Err(anyhow!(format!("invalid value-{:?}", val)))
+                                }
+                            }
                         }
                     }
                 }
@@ -1421,6 +1529,14 @@ lazy_static! {
     static ref BASE_DATETIME: NaiveDateTime = BASE_DATE.and_hms_opt(0, 0, 0).unwrap();
     static ref BASE_TIME: NaiveTime = NaiveTime::from_num_seconds_from_midnight_opt(0, 0).unwrap();
     static ref UNIX_DATE: NaiveDate = NaiveDate::from_ymd_opt(1970,  1, 1).unwrap();
+    static ref NULL_STRING: HashSet<String> = {
+        let mut v = HashSet::new();
+        v.insert("".into());
+        v.insert("-".into());
+        v.insert("--".into());
+        v.insert("#N/A".into());
+        v
+    };
     static ref DATETIME_FMTS: HashMap<u32, u8> = {
         let mut v = HashMap::new();
         v.extend((14..18).map(|n| (n, FMT_DATE)));

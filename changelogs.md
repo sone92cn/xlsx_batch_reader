@@ -1,28 +1,38 @@
 
 # Changelogs
+### [0.3.0] - 2024.11.15
+#### Changed
+* when retrieving non String data from CellValue, return None for '', '-', '-', '#N/A'
+
 ### [0.2.3] - 2024.11.10
 #### Added
 * add with_capture_vals and get_captured_vals to XlsxSheet
+
 
 ### [0.2.2] - 2024.11.9
 #### Added
 * add data type Timesecond(seconds since midnight)
 
+
 ### [0.2.1] - 2024.11.9
 #### Fixed
 * unable to read data if skip_until is an empty hashmap
+
 
 ### [0.2.0] - 2024.11.5
 #### Added
 * support to read partial rows based on conditions
 
+
 ### [0.1.14] - 2024.6.1
 #### Added
 * add trait IntoCellValue and implement NaiveDate, NaiveDateTime, NaiveTime, Date32, Timestamp for it
 
+
 ### [0.1.13] - 2024.6.1
 #### Changed
 * update dependency rust_xlsxwriter to the latest version
+
 
 ### [0.1.12] - 2024.6.1
 #### Added
@@ -71,6 +81,7 @@
 ### [0.1.3] - 2024.4.14
 #### Fixed
 * unable to use feature xlsxwriter
+
 
 ### [0.1.2] - 2024.4.13
 #### Added
