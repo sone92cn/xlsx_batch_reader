@@ -1031,6 +1031,8 @@ impl FromCellValue for f64 {
                     Err(_) => {
                         if NULL_STRING.contains(*s) {
                             Ok(None)
+                        } else if let Ok(n) = s.replace(',', "").parse::<f64>() {
+                            Ok(Some(n))
                         } else {
                             Err(anyhow!(format!("invalid value-{:?}", val)))
                         }
@@ -1043,6 +1045,8 @@ impl FromCellValue for f64 {
                     Err(_) => {
                         if NULL_STRING.contains(s) {
                             Ok(None)
+                        } else if let Ok(n) = s.replace(',', "").parse::<f64>() {
+                            Ok(Some(n))
                         } else {
                             Err(anyhow!(format!("invalid value-{:?}", val)))
                         }
@@ -1069,6 +1073,8 @@ impl FromCellValue for i64 {
                     Err(_) => {
                         if NULL_STRING.contains(*s) {
                             Ok(None)
+                        } else if let Ok(n) = s.replace(',', "").parse::<i64>() {
+                            Ok(Some(n))
                         } else {
                             Err(anyhow!(format!("invalid value-{:?}", val)))
                         }
@@ -1081,6 +1087,8 @@ impl FromCellValue for i64 {
                     Err(_) => {
                         if NULL_STRING.contains(s) {
                             Ok(None)
+                        } else if let Ok(n) = s.replace(',', "").parse::<i64>() {
+                            Ok(Some(n))
                         } else {
                             Err(anyhow!(format!("invalid value-{:?}", val)))
                         }
