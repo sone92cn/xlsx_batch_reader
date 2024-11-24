@@ -1,7 +1,7 @@
 
 # Changelogs
-### [0.3.1] - 2024.11.15
-#### Changed
+### [0.3.1] - 2024.11.24
+#### Fixed
 * when retrieving numbers from CellValue(stored as string), comma separators will be recognized correctly.
 
 ### [0.3.0] - 2024.11.15
