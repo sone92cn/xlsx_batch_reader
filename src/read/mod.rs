@@ -341,6 +341,7 @@ impl XlsxBook {
                             key: k,
                             buf: Vec::with_capacity(8*1024),
                             status: 1,
+                            currow: 0,
                             str_share: &self.str_share,
                             map_style: &self.map_style,
                             datetime_fmts: &self.datetime_fmts,
@@ -374,6 +375,7 @@ pub struct XlsxSheet<'a> {
     map_style: &'a HashMap<u32, u32>,
     buf: Vec<u8>,
     status: u8,   // 0-closed; 1-new; 2-active; 3-get_cell; 4-skip_cell; 初始为1
+    currow: RowNum,  //  当前行号
     reader: Reader<BufReader<ZipFile<'a>>>,
     iter_batch: usize,
     skip_rows: u32,
@@ -432,12 +434,14 @@ impl<'a> XlsxSheet<'a> {
         } else {
             self.right_ncol
         };
+        let empty = self.is_empty()?;
         let top_nrow = if self.first_row_is_header {self.skip_rows+2} else {self.skip_rows+1};
         Ok(CachedSheet {
             data,
             merged_rects,
             key: self.key,
             current: top_nrow,
+            empty,
             keep_empty: false,
             iter_batch: self.iter_batch,
             top_nrow,
@@ -504,6 +508,16 @@ impl<'a> XlsxSheet<'a> {
             Err(anyhow!("get_captured_vals error: first_row_is_header must be true"))
         }
     }
+    /// check whether the sheet is empty, should be called after at least one row has been read
+    pub fn is_empty(&self) -> Result<bool> {
+        if self.currow > 0 {
+            Ok(false)
+        } else if self.status == 0 {
+            Ok(true)
+        } else {
+            Err(anyhow!("is_empty should be called after at least one row has been read"))
+        }
+    }
     /// get column range, v0.1.7 the start column number included (start from 1)
     pub fn column_range(&self) -> (ColNum, ColNum) {
         (self.left_ncol+1, self.right_ncol)
@@ -531,7 +545,7 @@ impl<'a> XlsxSheet<'a> {
         let mut cell_type = vec![];
         let mut prev_head = vec![];
         let mut col_index: ColNum = 1;    // 当前需增加cell的col_index
-        let mut row_num: u32 = 0;
+        // let mut row_num: u32 = 0;     //  sheet中增加currow储存当前行号
         let mut row_value: Vec<CellValue<'_>> = Vec::new();
         let mut num_fmt_id: u32 = 0;
         if self.status == 0 {
@@ -577,13 +591,13 @@ impl<'a> XlsxSheet<'a> {
                             cell_addr = get_attr_val!(e, "r").to_string();   //  单元格地址
                             col = get_num_from_ord(cell_addr.as_bytes()).unwrap_or(0);
                             
-                            if row_num > self.skip_rows && col > self.left_ncol && col <= self.right_ncol {
+                            if self.currow > self.skip_rows && col > self.left_ncol && col <= self.right_ncol {
                                 self.status = 3;   // 3-get_cell; 4-skip_cell;
                             } else {
                                 self.status = 4;   // 3-get_cell; 4-skip_cell;
                             }
                         } else if prev_head == b"row" {
-                            row_num = get_attr_val!(e, "r", parse);
+                            self.currow = get_attr_val!(e, "r", parse);
                             let cap = {
                                 if self.right_ncol == MAX_COL_NUM {
                                     if let Some(x) = get_attr_val!(e, "spans").as_ref().split(":").last() {
@@ -609,6 +623,9 @@ impl<'a> XlsxSheet<'a> {
                         if let Some(x) = dim.get(1) {
                             self.max_size = Some(get_tuple_from_ord(x.as_bytes())?);
                         };
+                    } else if prev_head == b"sheetData" {
+                        self.status = 0;
+                        break Ok(None)
                     }
                 },
                 Ok(Event::Text(ref t)) => {
@@ -696,14 +713,19 @@ impl<'a> XlsxSheet<'a> {
                             };
                         }
                         self.addr_captures = None;    //  返回首行时，不再匹配captures
-                        break Ok(Some((row_num, row_value)))
+                        break Ok(Some((self.currow, row_value)))
                     }else if e.name().as_ref() == b"sheetData" {
                         self.status = 0; 
                         break Ok(None)
                     }
                 },
-                Ok(Event::Eof) => {break Ok(None)}, // exits the loop when reaching end of file
-                Err(e) => return Err(anyhow!("sharedStrings.xml is broken: {:?}", e)),
+                Ok(Event::Eof) => {
+                    self.status = 0; 
+                    break Ok(None)
+                },   // exits the loop when reaching end of file
+                Err(e) => {
+                    return Err(anyhow!("sheet data is broken: {:?}", e));
+                },
                 _ => ()                  // There are several other `Event`s we do not consider here
             }
             self.buf.clear();
@@ -895,6 +917,7 @@ pub struct CachedSheet<'a> {
     data: HashMap<RowNum, Vec<CellValue<'a>>>,
     key: String,
     current: RowNum,
+    empty: bool,
     keep_empty: bool,
     iter_batch: usize,
     top_nrow: RowNum,
@@ -915,6 +938,10 @@ impl <'a> CachedSheet<'a> {
     /// get sheet name
     pub fn sheet_name(&self) -> &String {
         &self.key
+    }
+    /// check whether the sheet is empty
+    pub fn is_empty(&self) -> bool {
+        self.empty
     }
     /// get row range
     pub fn row_range(&self) -> (RowNum, RowNum) {

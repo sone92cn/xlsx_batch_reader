@@ -1,12 +1,19 @@
 
 # Changelogs
+### [0.3.2] - 2024.11.25
+#### Added
+* support to check whether the sheet is empty
+
+
 ### [0.3.1] - 2024.11.24
 #### Fixed
 * when retrieving numbers from CellValue(stored as string), comma separators will be recognized correctly.
 
+
 ### [0.3.0] - 2024.11.15
 #### Changed
 * when retrieving non String data from CellValue, return None for '', '-', '-', '#N/A'
+
 
 ### [0.2.3] - 2024.11.10
 #### Added
