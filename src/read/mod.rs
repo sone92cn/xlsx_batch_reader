@@ -89,7 +89,7 @@ impl XlsxBook {
         let map_sheet = {
             let file = zip_archive.by_name("xl/workbook.xml")?;
             let mut reader =  Reader::from_reader(BufReader::new(file));
-            reader.trim_text(true);
+            // reader.trim_text(true);
 
             let mut buf = Vec::new();
             let mut map_share: HashMap<String, String> = HashMap::new();
@@ -152,7 +152,7 @@ impl XlsxBook {
             match zip_archive.by_name("xl/styles.xml") {
                 Ok(file) => {
                     let mut reader =  Reader::from_reader(BufReader::new(file));
-                    reader.trim_text(true);
+                    // reader.trim_text(true);
 
                     let mut inx: u32 = 0;
                     let mut act = false;
@@ -249,7 +249,7 @@ impl XlsxBook {
             match self.zip_archive.by_name("xl/sharedStrings.xml") {
                 Ok(file) => {
                     let mut reader =  Reader::from_reader(BufReader::new(file));
-                    reader.trim_text(true);
+                    // reader.trim_text(true);
 
                     let mut buf = Vec::with_capacity(3069);
                     let cap = loop {    // 获取ShareString容量
@@ -327,8 +327,8 @@ impl XlsxBook {
 
                 match self.zip_archive.by_name(v.as_str()) {
                     Ok(file) => {
-                        let mut reader = Reader::from_reader(BufReader::new(file));
-                        reader.trim_text(true);
+                        let reader = Reader::from_reader(BufReader::new(file));
+                        // reader.trim_text(true);
             
                         return Ok(XlsxSheet {
                             reader,

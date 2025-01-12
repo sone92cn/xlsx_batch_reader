@@ -1,5 +1,9 @@
 
 # Changelogs
+### [0.3.3] - 2024.01.12
+#### Changed
+* update dependency zip to the latest version
+
 ### [0.3.2] - 2024.11.25
 #### Added
 * support to check whether the sheet is empty
