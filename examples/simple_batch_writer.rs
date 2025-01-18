@@ -14,8 +14,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // the sheet name will be write at the begin of each row
         let pre_cells = vec![shname];
         if let Some((rows_nums, rows_data)) = sheet.get_remaining_cells()? {
-            writer.append_rows("sheet", rows_nums, rows_data, &pre_cells)?;
+            // write all data
+            // writer.append_rows("sheet", rows_nums, rows_data, &pre_cells)?;
             // if you don't want row numbers to be writed before data, set nrows = vec![];
+
+            // write by row
+            for (row_num, row_data) in rows_nums.into_iter().zip(rows_data) {
+                writer.append_row("sheet", Some(&row_num), row_data, &pre_cells)?;
+            }
         }; 
     };
     writer.save_as("xlsx/out.xlsx")?;

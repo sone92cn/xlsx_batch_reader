@@ -1,5 +1,9 @@
 
 # Changelogs
+### [0.3.5] - 2024.01.18
+#### Changed
+* rewrite xlsxwriter feature and allow to get raw Worksheet
+
 ### [0.3.3] - 2024.01.12
 #### Changed
 * update dependency zip to the latest version

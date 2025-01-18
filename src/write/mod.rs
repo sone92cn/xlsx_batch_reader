@@ -1,4 +1,5 @@
-use std::{collections::HashMap, path::Path};
+use std::collections::HashMap;
+
 use anyhow::{anyhow, Result};
 use rust_xlsxwriter::{Workbook, Worksheet, XlsxError, Format, IntoExcelData};
 
@@ -75,66 +76,10 @@ impl IntoExcelData for CellValue<'_> {
     }
 }
 
-struct Sheet {
-    sheet: Worksheet,
-    nextrow: u32,
-    columns: Option<HashMap<String, ColNum>>
-}
-
-impl Sheet {
-    /// append one row to sheet
-    /// pre_cells: write at the head of the row
-    /// row_num: number write after the pre_cells and before the row_data (usually get from XLsxSheet)，not the row number of the target row
-    /// row_data: write after the head and the nrow
-    #[inline]
-    fn write_row<T: IntoExcelData, H: IntoExcelData+Clone>(&mut self, pre_cells: &Vec<H>, row_num: Option<&RowNum>, row_data: Vec<T>) -> Result<()> {
-        let mut icol = pre_cells.len() as ColNum;
-        if icol > 0 {
-            self.sheet.write_row(self.nextrow, 0, pre_cells.clone())?;
-        }
-        if let Some(nrow) = row_num {
-            self.sheet.write_number(self.nextrow, icol, *nrow as f64)?;
-            icol += 1;
-        }
-        self.sheet.write_row(self.nextrow, icol, row_data)?;   // row-u32; col-u16
-        self.nextrow += 1;
-        Ok(())
-    }
-    #[inline]
-    fn write_row_by_name<T: IntoExcelData>(&mut self, row_data: HashMap<String, T>) -> Result<()> {
-        if let Some(columns) = &self.columns {
-            for (colname, colval) in row_data.into_iter() {
-                if let Some(colnum) = columns.get(&colname) {
-                    self.sheet.write(self.nextrow, *colnum, colval)?;
-                } else {
-                    return Err(anyhow!("column name {} not found", colname));
-                }
-            }
-            self.nextrow += 1;
-            Ok(())
-        } else {
-            Err(anyhow!("columns not set"))
-        }
-    }
-    #[inline]
-    fn write_columns(&mut self) -> Result<()> {
-        if let Some(columns) = &self.columns {
-            for (colval, colnum) in columns {
-                self.sheet.write(self.nextrow, *colnum, colval)?;
-            }
-            self.nextrow += 1;
-            Ok(())
-        } else {
-            Err(anyhow!("columns not set"))
-        }
-    }
-}
-
-// simple xlsx writer
 pub struct XlsxWriter {
-    names: Vec<String>,
-    sheets: HashMap<String, Sheet>,
-    opened: bool,
+    book: Workbook,
+    rows: HashMap<String, RowNum>,
+    open: bool,
     columns: HashMap<String, HashMap<String, ColNum>>,
     prepends: HashMap<String, bool>
 }
@@ -143,17 +88,20 @@ impl XlsxWriter {
     /// new xlsx writer
     pub fn new() -> Self {
         Self {
-            names: vec![],
-            sheets: HashMap::new(),
-            opened: true,
+            open: true,
+            book: Workbook::new(),
+            rows: HashMap::new(),
             columns: HashMap::new(),
             prepends: HashMap::new()
         }
     }
     /// check whether the sheet exists
     #[inline]
-    pub fn has_sheet(&self, shname: &String) -> bool {
-        self.names.contains(shname)
+    pub fn has_sheet(&mut self, shname: &String) -> bool {
+        match self.book.worksheet_from_name(&shname) {
+            Ok(_) => true,
+            Err(_) => false
+        }
     }
     /// set columns, if you have many sheets call this for each sheet   
     /// shname: sheet name   
@@ -167,24 +115,30 @@ impl XlsxWriter {
         self.columns.insert(shname.clone(), maps);
         self.prepends.insert(shname, add_to_top);
     }
-    /// get mutable sheet
+
+    /// get raw worksheet and total rows if yu want to do some actions on raw worksheet(such as styles).
+    /// if you append data to the worksheet directly, the total rows will not change.
+    /// do not append data to the worksheet directly. use `append_row/append_rows...` method instead.
     #[inline]
-    fn get_sheet_mut(&mut self, name: &str) -> Result<&mut Sheet> {
-        if self.opened {
-            if !self.sheets.contains_key(name) {
-                let mut sht = Sheet {
-                    nextrow: 0,
-                    sheet: Worksheet::new(),
-                    columns: self.columns.remove(name)
-                };
-                if self.prepends.get(name) == Some(&true) {
-                    sht.write_columns()?;
+    pub fn get_sheet_mut<'a, 'b>(&'a mut self, shname: &'b str) -> Result<(&'a mut Worksheet, RowNum)> {
+        if self.open {
+            if !self.rows.contains_key(shname) {
+                let sheet = self.book.add_worksheet();
+                sheet.set_name(shname)?;
+                if self.prepends.get(shname) == Some(&true) {
+                    if let Some(columns) = self.columns.get(shname) {
+                        for (colval, colnum) in columns {
+                            sheet.write(0, *colnum, colval)?;
+                        }
+                        self.rows.insert(shname.to_owned(), 1);
+                    } else {
+                        self.rows.insert(shname.to_owned(), 0);
+                    }
+                } else {
+                    self.rows.insert(shname.to_owned(), 0);
                 }
-                sht.sheet.set_name(name)?;
-                self.sheets.insert(name.to_owned(), sht);
-                self.names.push(name.to_owned());
-            };
-            self.sheets.get_mut(name).ok_or(anyhow!("sheet-{} not exist", name))
+            }
+            Ok((self.book.worksheet_from_name(shname)?, self.rows.get(shname).unwrap_or(&0).to_owned()))
         } else {
             Err(anyhow!("cannot write saved workbook"))
         }
@@ -195,9 +149,22 @@ impl XlsxWriter {
     /// data: write after the head and the nrow   
     /// pre_cells: write at the head of the row   
     /// if you will call this function many times, it is better to use append_rows
-    pub fn append_row<T: IntoExcelData, H: IntoExcelData+Clone>(&mut self, name: &str, nrow: Option<&RowNum>, data: Vec<T>, pre_cells: &Vec<H>)  -> Result<()> {
-        let sheet = self.get_sheet_mut(name)?;
-        sheet.write_row(pre_cells, nrow, data)?;
+    pub fn append_row<T: IntoExcelData, H: IntoExcelData+Clone>(&mut self, shname: &str, nrow: Option<&RowNum>, data: Vec<T>, pre_cells: &Vec<H>)  -> Result<()> {
+        let (sheet, mut irow) = self.get_sheet_mut(shname)?;
+
+        let mut icol = 0;
+        let npre = pre_cells.len() as ColNum;
+        if npre > 0 {
+            sheet.write_row(irow, icol, pre_cells.clone())?;
+            icol += npre;
+        }
+        if let Some(nrow) = nrow {
+            sheet.write_number(irow, icol, *nrow)?;
+            icol += 1;
+        }
+        sheet.write_row(irow, icol, data)?;
+        irow += 1;
+        self.rows.insert(shname.to_owned(), irow);
         Ok(())
     }
     /// append many rows to sheet   
@@ -205,47 +172,81 @@ impl XlsxWriter {
     /// nrows: number write after the pre_cells and before the row_data (usually get from XLsxSheet)，not the row number of the target row   
     /// data: write after the head and the nrow   
     /// pre_cells: write at the head of the row   
-    pub fn append_rows<T: IntoExcelData, H: IntoExcelData+Clone>(&mut self, name: &str, nrows: Vec<u32>, data: Vec<Vec<T>>, pre_cells: &Vec<H>) -> Result<()> {
-        let sheet = self.get_sheet_mut(name)?;
+    pub fn append_rows<T: IntoExcelData, H: IntoExcelData+Clone>(&mut self, shname: &str, nrows: Vec<u32>, data: Vec<Vec<T>>, pre_cells: &Vec<H>) -> Result<()> {
+        let (sheet, mut irow) = self.get_sheet_mut(shname)?;
         // 若nrows的长度为0，则不写行号
         if nrows.len() > 0 && nrows.len() != data.len() {
             return Err(anyhow!("the length of nrows is not equal to the length of data".to_string()));
         }
+
+        let mut icol;
+        let npre = pre_cells.len() as ColNum;
         for (i, rdata) in data.into_iter().enumerate() {
-            sheet.write_row(pre_cells, nrows.get(i), rdata)?;
+            icol = 0;
+            if npre > 0 {
+                sheet.write_row(irow, icol, pre_cells.clone())?;
+                icol += npre;
+            }
+            if let Some(nrow) = nrows.get(i) {
+                sheet.write_number(irow, icol, *nrow)?;
+                icol += 1;
+            }
+            sheet.write_row(irow, icol, rdata)?;
+            irow += 1;
         };
+        self.rows.insert(shname.to_owned(), irow);
         Ok(())
     }
     /// append one row to sheet by column name    
     /// name: sheet name, if not exists, create a new sheet    
     /// data: the data to write   
-    pub fn append_row_by_name<T: IntoExcelData>(&mut self, name: &str, data: HashMap<String, T>) -> Result<()> {
-        let sheet = self.get_sheet_mut(name)?;
-        sheet.write_row_by_name(data)?;
-        Ok(())
+    pub fn append_row_by_name<T: IntoExcelData>(&mut self, shname: &str, data: HashMap<String, T>) -> Result<()> {
+        if let Some(columns) = self.columns.get(shname) {
+            let columns = columns.clone();
+            let (sheet, mut irow) = self.get_sheet_mut(shname)?;
+            for (colname, colval) in data.into_iter() {
+                if let Some(colnum) = columns.get(&colname) {
+                    sheet.write(irow, *colnum, colval)?;
+                } else {
+                    return Err(anyhow!("column name {} not found", colname));
+                }
+            }
+            irow += 1;
+            self.rows.insert(shname.to_owned(), irow);
+            Ok(())
+        } else {
+            Err(anyhow!("columns not set"))
+        }
     }
     
     /// append many rows to sheet by column name    
     /// name: sheet name, if not exists, create a new sheet    
     /// data: the data to write   
-    pub fn append_rows_by_name<T: IntoExcelData>(&mut self, name: &str, data: Vec<HashMap<String, T>>) -> Result<()> {
-        let sheet = self.get_sheet_mut(name)?;
-        for rdata in data.into_iter() {
-            sheet.write_row_by_name(rdata)?;
-        };
-        Ok(())
+    pub fn append_rows_by_name<T: IntoExcelData>(&mut self, shname: &str, data: Vec<HashMap<String, T>>) -> Result<()> {
+        if let Some(columns) = self.columns.get(shname) {
+            let columns = columns.clone();
+            let (sheet, mut irow) = self.get_sheet_mut(shname)?;
+            for rdata in data.into_iter() {
+                for (colname, colval) in rdata.into_iter() {
+                    if let Some(colnum) = columns.get(&colname) {
+                        sheet.write(irow, *colnum, colval)?;
+                    } else {
+                        return Err(anyhow!("column name {} not found", colname));
+                    }
+                }
+                irow += 1;
+            };
+            self.rows.insert(shname.to_owned(), irow);
+            Ok(())
+        } else {
+            Err(anyhow!("columns not set"))
+        }
     }
     /// save as xlsx file, can only run once each writer
-    pub fn save_as<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
-        if self.opened {
-            let mut book = Workbook::new();
-            for name in &self.names {
-                if let Some(sheet) = self.sheets.remove(name) {
-                    book.push_worksheet(sheet.sheet)
-                }
-            }
-            book.save(path)?;
-            self.opened = false;
+    pub fn save_as<P: AsRef<std::path::Path>>(&mut self, path: P) -> Result<()> {
+        if self.open {
+            self.book.save(path)?;
+            self.open = false;
             Ok(())
         } else {
             Err(anyhow!("cannot save saved workbook"))
@@ -257,4 +258,5 @@ lazy_static::lazy_static! {
     static ref FMT_DEFAULT_DATE: Format = Format::new().set_num_format_index(14);
     static ref FMT_DEFAULT_TIME: Format = Format::new().set_num_format_index(21);
     static ref FMT_DEFAULT_DATETIME: Format = Format::new().set_num_format_index(22);
+    static ref EMPTY_COLUMNS: HashMap<String, ColNum> = HashMap::new();
 }
