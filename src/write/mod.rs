@@ -123,6 +123,7 @@ impl XlsxWriter {
     pub fn get_sheet_mut<'a, 'b>(&'a mut self, shname: &'b str) -> Result<(&'a mut Worksheet, RowNum)> {
         if self.open {
             if !self.rows.contains_key(shname) {
+                // self.book.add
                 let sheet = self.book.add_worksheet();
                 sheet.set_name(shname)?;
                 if self.prepends.get(shname) == Some(&true) {

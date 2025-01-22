@@ -44,7 +44,7 @@ lazy_static = "1.4.0"
 anyhow = "1.0.75"
 
 [dependencies.rust_xlsxwriter]
-version = "0.80.0"
+version = "0.81.0"
 features = ["zlib", "chrono"]
 optional = true
 
