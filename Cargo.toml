@@ -31,7 +31,7 @@ codegen-units = 16         # 增加代码单元的数量可以并行编译代码
 overflow-checks = true     # 关闭整数溢出检查
 
 [features]
-default = ["xlsxwriter"]                    # 默认不启用任何额外功能
+default = []                    # 默认不启用任何额外功能
 cached = []                     # 启用缓存功能
 xlsxwriter = ["rust_xlsxwriter"]            # 定义名为"rust_xlsxwriter"的feature，依赖于"dependency_writer"
 full = ["cached", "xlsxwriter"]             # 启用所有feature
