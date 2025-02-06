@@ -1,12 +1,18 @@
-
 # Changelogs
+### [0.4.0] - 2024.02.06
+#### Changed
+* the xlsxwriter feature keeps memory usage to a minimum when writing writing large files
+
+
 ### [0.3.5] - 2024.01.18
 #### Changed
 * rewrite xlsxwriter feature and allow to get raw Worksheet
 
+
 ### [0.3.3] - 2024.01.12
 #### Changed
 * update dependency zip to the latest version
+
 
 ### [0.3.2] - 2024.11.25
 #### Added

@@ -1,6 +1,6 @@
 [package]
 name = "xlsx_batch_reader"
-version = "0.3.5"
+version = "0.4.0"
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/sone92cn/xlsx_batch_reader"
@@ -31,20 +31,20 @@ codegen-units = 16         # 增加代码单元的数量可以并行编译代码
 overflow-checks = true     # 关闭整数溢出检查
 
 [features]
-default = []                    # 默认不启用任何额外功能
+default = ["xlsxwriter"]                    # 默认不启用任何额外功能
 cached = []                     # 启用缓存功能
 xlsxwriter = ["rust_xlsxwriter"]            # 定义名为"rust_xlsxwriter"的feature，依赖于"dependency_writer"
 full = ["cached", "xlsxwriter"]             # 启用所有feature
 
 [dependencies]
 zip = "2.0.0"
-chrono = "0.4.35"
+chrono = "0.4.39"
 quick-xml = "0.37.0"
 lazy_static = "1.4.0"
 anyhow = "1.0.75"
 
 [dependencies.rust_xlsxwriter]
-version = "0.81.0"
-features = ["zlib", "chrono"]
+version = "0.83.0"
+features = ["zlib", "chrono", "constant_memory"]
 optional = true
 
