@@ -10,6 +10,10 @@ pub mod read;
 #[cfg(feature = "xlsxwriter")]
 pub mod write;
 
+
+/// reexport chrono
+pub use chrono;
+
 /// days since UNIX epoch
 pub type Date32 = i32;  
 /// seconds since UNIX epoch

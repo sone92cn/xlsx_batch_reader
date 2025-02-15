@@ -1,5 +1,9 @@
 # Changelogs
-### [0.4.0] - 2024.02.06
+### [0.4.2] - 2024.02.15
+#### Changed
+* public use chrono
+
+### [0.4.1] - 2024.02.06
 #### Changed
 * the xlsxwriter feature keeps memory usage to a minimum when writing writing large files
 
