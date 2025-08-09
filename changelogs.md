@@ -1,19 +1,26 @@
 # Changelogs
-### [0.4.2] - 2024.02.15
+### [0.4.5] - 2025.08.09
+#### Fixed
+* Ubable to read data if workbook.xml.rels use full path
+
+#### Changed
+* Update dependency zip、rust_xlsxwriter to the latest version
+
+### [0.4.2] - 2025.02.15
 #### Changed
 * public use chrono
 
-### [0.4.1] - 2024.02.06
+### [0.4.1] - 2025.02.06
 #### Changed
 * the xlsxwriter feature keeps memory usage to a minimum when writing writing large files
 
 
-### [0.3.5] - 2024.01.18
+### [0.3.5] - 2025.01.18
 #### Changed
 * rewrite xlsxwriter feature and allow to get raw Worksheet
 
 
-### [0.3.3] - 2024.01.12
+### [0.3.3] - 2025.01.12
 #### Changed
 * update dependency zip to the latest version
 

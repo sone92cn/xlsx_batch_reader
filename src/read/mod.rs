@@ -384,7 +384,7 @@ pub struct XlsxSheet<'a> {
     buf: Vec<u8>,
     status: u8,   // 0-closed; 1-new; 2-active; 3-get_cell; 4-skip_cell; 初始为1
     currow: RowNum,  //  当前行号
-    reader: Reader<BufReader<ZipFile<'a>>>,
+    reader: Reader<BufReader<ZipFile<'a, BufReader<File>>>>,
     iter_batch: usize,
     skip_rows: u32,
     max_size: Option<(RowNum, ColNum)>,
