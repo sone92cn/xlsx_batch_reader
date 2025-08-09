@@ -1,9 +1,10 @@
 # Changelogs
-### [0.4.5] - 2025.08.09
+### [0.4.6] - 2025.08.09
 #### Fixed
 * Ubable to read data if workbook.xml.rels use full path
 
 #### Changed
+* public use rust_xlsxwriter
 * Update dependency zip、rust_xlsxwriter to the latest version
 
 ### [0.4.2] - 2025.02.15

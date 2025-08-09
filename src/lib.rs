@@ -13,6 +13,8 @@ pub mod write;
 
 /// reexport chrono
 pub use chrono;
+#[cfg(feature = "xlsxwriter")]
+pub use rust_xlsxwriter;
 
 /// days since UNIX epoch
 pub type Date32 = i32;  
