@@ -326,7 +326,7 @@ impl XlsxBook {
     /// skip_rows: number of skipped rows  
     /// left_ncol: Starting column (included), with 1 as the starting value  
     /// right_ncol: Terminate columns (including), MAX-COL_NUM to get non fixed termination columns  
-    pub fn get_sheet_by_name(&mut self, sht_name: &String, iter_batch: usize, skip_rows: u32, left_ncol: ColNum, right_ncol: ColNum, first_row_is_header: bool) -> Result<XlsxSheet> {
+    pub fn get_sheet_by_name<'a, 'b>(&'a mut self, sht_name: &'b String, iter_batch: usize, skip_rows: u32, left_ncol: ColNum, right_ncol: ColNum, first_row_is_header: bool) -> Result<XlsxSheet<'a>> {
         for (k, v) in self.map_sheet.clone() {
             if k.eq(sht_name) {
                 if !self.ini_share {
