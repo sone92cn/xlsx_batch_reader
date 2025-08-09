@@ -100,7 +100,11 @@ impl XlsxBook {
                             let name = get_attr_val!(e, "name", to_string);
                             let rid = get_attr_val!(e, "r:id", to_string);
                             let sheet = if book_refs.contains_key(&rid) {
-                                format!("xl/{}", book_refs[&rid])
+                                if book_refs[&rid].starts_with('/') {
+                                    format!("{}", book_refs[&rid].trim_start_matches('/'))
+                                } else {
+                                    format!("xl/{}", book_refs[&rid])
+                                }
                             } else {
                                 return Err(anyhow!("Relationship of sheet-{rid} not found"))
                             };
@@ -122,7 +126,11 @@ impl XlsxBook {
                             let name = get_attr_val!(e, "name", to_string);
                             let rid = get_attr_val!(e, "r:id", to_string);
                             let sheet = if book_refs.contains_key(&rid) {
-                                format!("xl/{}", book_refs[&rid])
+                                if book_refs[&rid].starts_with('/') {
+                                    format!("{}", book_refs[&rid].trim_start_matches('/'))
+                                } else {
+                                    format!("/xl/{}", book_refs[&rid])
+                                }
                             } else {
                                 return Err(anyhow!("Relationship of sheet-rid not found!"))
                             };
@@ -285,7 +293,7 @@ impl XlsxBook {
                             },
                             Ok(Event::Text(ref t)) => {
                                 if insert {
-                                    shstring += &t.unescape()?.as_ref();
+                                    shstring += &String::from_utf8(t.to_vec())?;
                                 }
                             },
                             Ok(Event::End(ref e)) => {
@@ -376,7 +384,7 @@ pub struct XlsxSheet<'a> {
     buf: Vec<u8>,
     status: u8,   // 0-closed; 1-new; 2-active; 3-get_cell; 4-skip_cell; 初始为1
     currow: RowNum,  //  当前行号
-    reader: Reader<BufReader<ZipFile<'a, BufReader<std::fs::File>>>>,
+    reader: Reader<BufReader<ZipFile<'a>>>,
     iter_batch: usize,
     skip_rows: u32,
     max_size: Option<(RowNum, ColNum)>,
@@ -642,7 +650,7 @@ impl<'a> XlsxSheet<'a> {
                             col_index += 1;
                         }
                         let cel_val = if cell_type == b"inlineStr" && prev_head == b"t" {
-                            CellValue::String(t.unescape()?.to_string())
+                            CellValue::String(String::from_utf8(t.to_vec())?)
                         } else if prev_head == b"v" {
                             if cell_type == b"s" {
                                 CellValue::Shared(&self.str_share[String::from_utf8(t.to_vec())?.parse::<usize>()?])
@@ -668,7 +676,7 @@ impl<'a> XlsxSheet<'a> {
                             } else if cell_type == b"e" {
                                 CellValue::Error(String::from_utf8(t.to_vec())?)
                             } else if cell_type == b"str" {
-                                CellValue::String(t.unescape()?.to_string())
+                                CellValue::String(String::from_utf8(t.to_vec())?)
                             } else{
                                 CellValue::Blank
                             }
