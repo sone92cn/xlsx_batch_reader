@@ -1,4 +1,11 @@
 # Changelogs
+### [0.4.8] - 2025.08.10
+#### Fixed
+* Ubable to read inlineStr
+
+#### Changed
+* public use zip
+
 ### [0.4.7] - 2025.08.09
 #### Fixed
 * Ubable to read data if workbook.xml.rels use full path

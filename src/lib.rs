@@ -11,7 +11,8 @@ pub mod read;
 pub mod write;
 
 
-/// reexport chrono
+/// reexport
+pub use zip;
 pub use chrono;
 #[cfg(feature = "xlsxwriter")]
 pub use rust_xlsxwriter;

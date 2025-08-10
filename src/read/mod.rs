@@ -374,6 +374,9 @@ impl XlsxBook {
     pub fn get_cached_sheet_by_name(&mut self, sht_name: &String, iter_batch: usize, skip_rows: u32, left_ncol: ColNum, right_ncol: ColNum, first_row_is_header: bool) -> Result<CachedSheet> {
         Ok(self.get_sheet_by_name(sht_name, iter_batch, skip_rows, left_ncol, right_ncol, first_row_is_header)?.into_cached_sheet()?)
     }
+    pub fn get_sheets_maps(&self) -> &HashMap<String, String> {
+        &self.map_sheet
+    }
 }
 
 /// batch sheet reader
@@ -608,11 +611,23 @@ impl<'a> XlsxSheet<'a> {
                             self.currow = get_attr_val!(e, "r", parse);
                             let cap = {
                                 if self.right_ncol == MAX_COL_NUM {
-                                    if let Some(x) = get_attr_val!(e, "spans").as_ref().split(":").last() {
-                                        x.parse()?
-                                    } else {
-                                        1
+                                    match e.try_get_attribute("spans") {
+                                        Ok(Some(spans)) => {
+                                            if let Some(x) = spans.unescape_value()?.as_ref().split(":").last() {
+                                                x.parse()?
+                                            } else {
+                                                1
+                                            }
+                                        },
+                                        _ => {
+                                            1
+                                        }
                                     }
+                                    // if let Some(x) = get_attr_val!(e, "spans").as_ref().split(":").last() {
+                                    //     x.parse()?
+                                    // } else {
+                                    //     1
+                                    // }
                                 } else {
                                     self.right_ncol
                                 }
@@ -644,12 +659,12 @@ impl<'a> XlsxSheet<'a> {
                     // n for number
                     // s for shared string (so stored in the shared strings part and not in the cell)
                     // str for a formula (a string representing the formula)
-                    if self.status == 3 && prev_head == b"v"{
+                    if self.status == 3 && (prev_head == b"v" || prev_head == b"t") {
                         while col_index + self.left_ncol < col {
                             row_value.push(CellValue::Blank);
                             col_index += 1;
                         }
-                        let cel_val = if cell_type == b"inlineStr" && prev_head == b"t" {
+                        let cel_val = if cell_type == b"inlineStr" && prev_head == b"t" { 
                             CellValue::String(String::from_utf8(t.to_vec())?)
                         } else if prev_head == b"v" {
                             if cell_type == b"s" {
