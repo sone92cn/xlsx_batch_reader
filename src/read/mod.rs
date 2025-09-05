@@ -357,6 +357,7 @@ impl XlsxBook {
                             merged_rects: None,
                             skip_until: None,
                             skip_matched: None,
+                            skip_matched_check_by_and: true,
                             read_before: None,
                             addr_captures: None,
                             vals_captures: HashMap::new(),
@@ -400,6 +401,7 @@ pub struct XlsxSheet<'a> {
     merged_rects: Option<Vec<((RowNum, ColNum), (RowNum, ColNum))>>,
     skip_until: Option<HashMap<usize, String>>,
     skip_matched: Option<HashMap<usize, String>>,
+    skip_matched_check_by_and: bool,
     read_before: Option<HashMap<usize, String>>,
     addr_captures: Option<HashSet<String>>,
     vals_captures: HashMap<String, CellValue<'a>>
@@ -484,7 +486,9 @@ impl<'a> XlsxSheet<'a> {
         }
     }
     /// skip the matched row, this function should be called before reading(the matched row will be skiped)
-    pub fn with_skip_matched(&mut self, checks: &HashMap<String, String>) {
+    /// check_by_and - true: all cells should be matched
+    /// check_by_and - false: any cell should be matched
+    pub fn with_skip_matched(&mut self, checks: &HashMap<String, String>, check_by_and: bool) {
         let mut maps = HashMap::new();
         for (c, v) in checks {
             let col = get_num_from_ord(c.as_bytes()).unwrap_or(0);
@@ -494,6 +498,7 @@ impl<'a> XlsxSheet<'a> {
         }
         if maps.len() > 0 {
             self.skip_matched = Some(maps);
+            self.skip_matched_check_by_and = check_by_and;
         } else {
             self.skip_matched = None;
         }
@@ -552,21 +557,34 @@ impl<'a> XlsxSheet<'a> {
     }
     /// get next row
     fn get_next_row(&mut self) -> Result<Option<(u32, Vec<CellValue<'a>>)>> {
-        fn is_matched_row(row: &Vec<CellValue<'_>>, checks: &HashMap<usize, String>) -> bool {
-            for (i, v) in checks {
-                if let Some(cell) = row.get(*i) {
-                    if let Ok(Some(s)) = cell.get::<String>() {
-                        if s != *v {
-                            return false
+        fn is_matched_row(row: &Vec<CellValue<'_>>, checks: &HashMap<usize, String>, check_by_and: bool) -> bool {
+            if check_by_and {
+                for (i, v) in checks {
+                    if let Some(cell) = row.get(*i) {
+                        if let Ok(Some(s)) = cell.get::<String>() {
+                            if s != *v {
+                                return false;
+                            }
+                        } else {
+                            return false;
                         }
                     } else {
                         return false;
                     }
-                } else {
-                    return false;
                 }
+                true
+            } else {
+                for (i, v) in checks {
+                    if let Some(cell) = row.get(*i) {
+                        if let Ok(Some(s)) = cell.get::<String>() {
+                            if s == *v {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                false
             }
-            true
         }
         let mut col: ColNum = 0;
         let mut cell_addr = "".into();
@@ -728,7 +746,7 @@ impl<'a> XlsxSheet<'a> {
                     // 0-closed; 1-new; 2-active;
                     if (e.name().as_ref() == b"row") && self.status > 1 && row_value.len() > 0 {
                         if let Some(skip_until) = &self.skip_until {
-                            if is_matched_row(&row_value, skip_until) {
+                            if is_matched_row(&row_value, skip_until, true) {
                                 self.skip_until = None;
                             } else {
                                 // col = 0;   //  reset each cell
@@ -741,7 +759,7 @@ impl<'a> XlsxSheet<'a> {
                                 continue;
                             }   //  读取到初始行前继续读取
                         } else if let Some(read_before) = &self.read_before {
-                            if is_matched_row(&row_value, read_before) {
+                            if is_matched_row(&row_value, read_before, true) {
                                 self.status = 0; 
                                 self.read_before = None;
                                 break Ok(None);
@@ -749,7 +767,7 @@ impl<'a> XlsxSheet<'a> {
                         };
                         if !self.first_row_is_header {    //  不跳过标题行
                             if let Some(skip_matched) = &self.skip_matched {
-                                if is_matched_row(&row_value, skip_matched) {
+                                if is_matched_row(&row_value, skip_matched, self.skip_matched_check_by_and) {
                                     continue;    //   如果当前行满足条件，忽略当前行; 
                                 }
                             } 

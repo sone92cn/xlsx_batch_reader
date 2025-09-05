@@ -1,4 +1,8 @@
 # Changelogs
+### [0.4.12] - 2025.09.05
+#### Added
+* support to skip matched row(s) by all cell or any cell
+
 ### [0.4.10] - 2025.09.05
 #### Fixed
 * header row may be skiped when read xlsx file
