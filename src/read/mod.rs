@@ -356,6 +356,7 @@ impl XlsxBook {
                             max_size: None,
                             merged_rects: None,
                             skip_until: None,
+                            skip_matched: None,
                             read_before: None,
                             addr_captures: None,
                             vals_captures: HashMap::new(),
@@ -398,6 +399,7 @@ pub struct XlsxSheet<'a> {
     datetime_fmts: &'a HashMap<u32, u8>,
     merged_rects: Option<Vec<((RowNum, ColNum), (RowNum, ColNum))>>,
     skip_until: Option<HashMap<usize, String>>,
+    skip_matched: Option<HashMap<usize, String>>,
     read_before: Option<HashMap<usize, String>>,
     addr_captures: Option<HashSet<String>>,
     vals_captures: HashMap<String, CellValue<'a>>
@@ -479,6 +481,21 @@ impl<'a> XlsxSheet<'a> {
             self.skip_until = Some(maps);
         } else {
             self.skip_until = None;
+        }
+    }
+    /// skip the matched row 
+    pub fn with_skip_matched(&mut self, checks: &HashMap<String, String>) {
+        let mut maps = HashMap::new();
+        for (c, v) in checks {
+            let col = get_num_from_ord(c.as_bytes()).unwrap_or(0);
+            if col > self.left_ncol && col <= self.right_ncol {
+                maps.insert((col-self.left_ncol-1) as usize, v.clone());
+            }
+        }
+        if maps.len() > 0 {
+            self.skip_matched = Some(maps);
+        } else {
+            self.skip_matched = None;
         }
     }
     /// read before a row matched，this function should be called before reading(the matched row will not be included)
@@ -723,6 +740,10 @@ impl<'a> XlsxSheet<'a> {
                                 // row_value = Vec::new();    // reset each row
                                 continue;
                             }   //  读取到初始行前继续读取
+                        } else if let Some(skip_matched) = &self.skip_matched {
+                            if is_matched_row(&row_value, skip_matched) {
+                                continue;    //   如果当前行满足条件，忽略当前行
+                            }
                         } else if let Some(read_before) = &self.read_before {
                             if is_matched_row(&row_value, read_before) {
                                 self.status = 0; 
