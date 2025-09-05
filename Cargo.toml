@@ -1,6 +1,6 @@
 [package]
 name = "xlsx_batch_reader"
-version = "0.4.10"
+version = "0.4.11"
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/sone92cn/xlsx_batch_reader"
@@ -37,11 +37,12 @@ xlsxwriter = ["rust_xlsxwriter"]            # 定义名为"rust_xlsxwriter"的fe
 full = ["cached", "xlsxwriter"]             # 启用所有feature
 
 [dependencies]
-zip = "4.0.0"
+# zip = "4.0.0"
 chrono = "0.4.39"
 quick-xml = "0.37.0"
 lazy_static = "1.4.0"
 anyhow = "1.0.75"
+zip = {version = "4.0.0", features = ["zstd"]}
 
 [dependencies.rust_xlsxwriter]
 version = "0.89.0"
