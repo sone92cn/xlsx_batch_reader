@@ -394,7 +394,7 @@ pub struct XlsxSheet<'a> {
     max_size: Option<(RowNum, ColNum)>,
     left_ncol: ColNum,
     right_ncol: ColNum,
-    first_row_is_header: bool,
+    first_row_is_header: bool,    //  标识是否需要把读取到的第一行作为标题，读取到标题行以后，会被设置为false
     first_row: Option<(u32, Vec<CellValue<'a>>)>,
     datetime_fmts: &'a HashMap<u32, u8>,
     merged_rects: Option<Vec<((RowNum, ColNum), (RowNum, ColNum))>>,
@@ -483,7 +483,7 @@ impl<'a> XlsxSheet<'a> {
             self.skip_until = None;
         }
     }
-    /// skip the matched row 
+    /// skip the matched row, this function should be called before reading(the matched row will be skiped)
     pub fn with_skip_matched(&mut self, checks: &HashMap<String, String>) {
         let mut maps = HashMap::new();
         for (c, v) in checks {
@@ -740,17 +740,20 @@ impl<'a> XlsxSheet<'a> {
                                 // row_value = Vec::new();    // reset each row
                                 continue;
                             }   //  读取到初始行前继续读取
-                        } else if let Some(skip_matched) = &self.skip_matched {
-                            if is_matched_row(&row_value, skip_matched) {
-                                continue;    //   如果当前行满足条件，忽略当前行
-                            }
                         } else if let Some(read_before) = &self.read_before {
                             if is_matched_row(&row_value, read_before) {
                                 self.status = 0; 
                                 self.read_before = None;
                                 break Ok(None);
                             }  //  读取到结尾行后不再继续读取，且抛弃结尾行
-                        }
+                        };
+                        if !self.first_row_is_header {    //  不跳过标题行
+                            if let Some(skip_matched) = &self.skip_matched {
+                                if is_matched_row(&row_value, skip_matched) {
+                                    continue;    //   如果当前行满足条件，忽略当前行; 
+                                }
+                            } 
+                        };
                         if self.right_ncol != MAX_COL_NUM {
                             while row_value.len() < row_value.capacity() {
                                 row_value.push(CellValue::Blank);

@@ -1,4 +1,9 @@
 # Changelogs
+### [0.4.10] - 2025.09.05
+#### Fixed
+* header row may be skiped when read xlsx file
+
+
 ### [0.4.9] - 2025.09.05
 #### Added
 * support to skip matched row(s) when read xlsx file
