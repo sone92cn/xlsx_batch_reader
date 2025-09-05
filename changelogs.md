@@ -1,10 +1,16 @@
 # Changelogs
+### [0.4.9] - 2025.09.05
+#### Added
+* support to skip matched row(s) when read xlsx file
+
+
 ### [0.4.8] - 2025.08.10
 #### Fixed
 * Ubable to read inlineStr
 
 #### Changed
 * public use zip
+
 
 ### [0.4.7] - 2025.08.09
 #### Fixed
@@ -15,9 +21,11 @@
 * public use rust_xlsxwriter
 * Update dependency zip、rust_xlsxwriter to the latest version
 
+
 ### [0.4.2] - 2025.02.15
 #### Changed
 * public use chrono
+
 
 ### [0.4.1] - 2025.02.06
 #### Changed
