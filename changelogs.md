@@ -1,4 +1,11 @@
 # Changelogs
+### [0.4.13] - 2025.09.06
+#### Added
+* support to check header row
+#### Fixed
+* unable to recognize header row in cached sheet
+
+
 ### [0.4.12] - 2025.09.05
 #### Added
 * support to skip matched row(s) by all cell or any cell

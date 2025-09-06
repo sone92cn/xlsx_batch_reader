@@ -33,6 +33,37 @@ macro_rules! get_attr_val {
     };
 }
 
+/// check if row is matched
+fn is_matched_row(row: &Vec<CellValue<'_>>, checks: &HashMap<usize, HashSet<String>>, check_by_and: bool) -> (bool, String) {
+    if check_by_and {
+        for (i, v) in checks {
+            if let Some(cell) = row.get(*i) {
+                if let Ok(Some(s)) = cell.get::<String>() {
+                    if !v.contains(&s) {
+                        return (false, format!("{:?}", v));
+                    }
+                } else {
+                    return (false, format!("{:?}", v));
+                }
+            } else {
+                return (false, format!("{:?}", v));
+            }
+        }
+        (true, "".to_string())
+    } else {
+        for (i, v) in checks {
+            if let Some(cell) = row.get(*i) {
+                if let Ok(Some(s)) = cell.get::<String>() {
+                    if v.contains(&s) {
+                        return (true, format!("{:?}", v));
+                    }
+                }
+            }
+        }
+        (false, "".to_string())
+    }
+}
+
 /// xlsx book reader
 pub struct XlsxBook {
     ini_share: bool,
@@ -359,6 +390,7 @@ impl XlsxBook {
                             skip_matched: None,
                             skip_matched_check_by_and: true,
                             read_before: None,
+                            header_check: None,
                             addr_captures: None,
                             vals_captures: HashMap::new(),
                         });
@@ -373,9 +405,10 @@ impl XlsxBook {
     }
     /// get cached sheet by name, all data will be cached in memory when sheet created
     #[cfg(feature = "cached")]
-    pub fn get_cached_sheet_by_name(&mut self, sht_name: &String, iter_batch: usize, skip_rows: u32, left_ncol: ColNum, right_ncol: ColNum, first_row_is_header: bool) -> Result<CachedSheet> {
+    pub fn get_cached_sheet_by_name<'a>(&'a mut self, sht_name: &String, iter_batch: usize, skip_rows: u32, left_ncol: ColNum, right_ncol: ColNum, first_row_is_header: bool) -> Result<CachedSheet<'a>> {
         Ok(self.get_sheet_by_name(sht_name, iter_batch, skip_rows, left_ncol, right_ncol, first_row_is_header)?.into_cached_sheet()?)
     }
+    /// get sheet name map
     pub fn get_sheets_maps(&self) -> &HashMap<String, String> {
         &self.map_sheet
     }
@@ -399,10 +432,11 @@ pub struct XlsxSheet<'a> {
     first_row: Option<(u32, Vec<CellValue<'a>>)>,
     datetime_fmts: &'a HashMap<u32, u8>,
     merged_rects: Option<Vec<((RowNum, ColNum), (RowNum, ColNum))>>,
-    skip_until: Option<HashMap<usize, String>>,
-    skip_matched: Option<HashMap<usize, String>>,
+    skip_until: Option<HashMap<usize, HashSet<String>>>,
+    skip_matched: Option<HashMap<usize, HashSet<String>>>,
     skip_matched_check_by_and: bool,
-    read_before: Option<HashMap<usize, String>>,
+    read_before: Option<HashMap<usize, HashSet<String>>>,
+    header_check: Option<HashMap<usize, HashSet<String>>>,
     addr_captures: Option<HashSet<String>>,
     vals_captures: HashMap<String, CellValue<'a>>
 }
@@ -411,6 +445,10 @@ impl<'a> XlsxSheet<'a> {
     /// into cached sheet
     #[cfg(feature = "cached")]
     fn into_cached_sheet(mut self) -> Result<CachedSheet<'a>> {
+        let top_nrow = if self.first_row_is_header {self.skip_rows+2} else {self.skip_rows+1};
+        if self.first_row_is_header {
+            self.get_header_row()?;
+        }
         let (data, bottom_nrow) =  match self.get_next_row() {
             Ok(Some((r, d))) => {
                 let mut data = if let Some((rn, _)) = self.max_size {
@@ -450,7 +488,6 @@ impl<'a> XlsxSheet<'a> {
             self.right_ncol
         };
         let empty = self.is_empty()?;
-        let top_nrow = if self.first_row_is_header {self.skip_rows+2} else {self.skip_rows+1};
         Ok(CachedSheet {
             data,
             merged_rects,
@@ -470,13 +507,13 @@ impl<'a> XlsxSheet<'a> {
     pub fn sheet_name(&self) -> &String {
         &self.key
     }
-    /// skip until a row matched，this function should be called before reading(the matched row will be included)   
+    /// skip until a row matched，this function should be called before reading(the matched row will be returned)   
     pub fn with_skip_until(&mut self, checks: &HashMap<String, String>) {
         let mut maps = HashMap::new();
         for (c, v) in checks {
             let col = get_num_from_ord(c.as_bytes()).unwrap_or(0);
             if col > self.left_ncol && col <= self.right_ncol {
-                maps.insert((col-self.left_ncol-1) as usize, v.clone());
+                maps.insert((col-self.left_ncol-1) as usize, v.split('|').map(|s| s.to_string()).collect());
             }
         }
         if maps.len() > 0 {
@@ -485,15 +522,15 @@ impl<'a> XlsxSheet<'a> {
             self.skip_until = None;
         }
     }
-    /// skip the matched row, this function should be called before reading(the matched row will be skiped)
-    /// check_by_and - true: all cells should be matched
-    /// check_by_and - false: any cell should be matched
+    /// skip the matched row, this function should be called before reading(the matched row will be returned)   
+    /// when check_by_and is true, all check cells should be matched    
+    /// when check_by_and is false, at least one check cell should be matched
     pub fn with_skip_matched(&mut self, checks: &HashMap<String, String>, check_by_and: bool) {
         let mut maps = HashMap::new();
         for (c, v) in checks {
             let col = get_num_from_ord(c.as_bytes()).unwrap_or(0);
             if col > self.left_ncol && col <= self.right_ncol {
-                maps.insert((col-self.left_ncol-1) as usize, v.clone());
+                maps.insert((col-self.left_ncol-1) as usize, v.split('|').map(|s| s.to_string()).collect());
             }
         }
         if maps.len() > 0 {
@@ -503,19 +540,34 @@ impl<'a> XlsxSheet<'a> {
             self.skip_matched = None;
         }
     }
-    /// read before a row matched，this function should be called before reading(the matched row will not be included)
+    /// read before a row matched，this function should be called before reading(the matched row will not be returned)
     pub fn with_read_before(&mut self, checks: &HashMap<String, String>) {
         let mut maps = HashMap::new();
         for (c, v) in checks {
             let col = get_num_from_ord(c.as_bytes()).unwrap_or(0);
             if col > self.left_ncol && col <= self.right_ncol {
-                maps.insert((col-self.left_ncol-1) as usize, v.clone());
+                maps.insert((col-self.left_ncol-1) as usize, v.split('|').map(|s| s.to_string()).collect());
             }
         }
         if maps.len() > 0 {
             self.read_before = Some(maps);
         } else {
             self.read_before = None;
+        }
+    }
+    /// check header row, this function should be called before reading. If the header is not matched, An error will be raised.
+    pub fn with_header_check(&mut self, checks: &HashMap<String, String>) {
+        let mut maps = HashMap::new();
+        for (c, v) in checks {
+            let col = get_num_from_ord(c.as_bytes()).unwrap_or(0);
+            if col > self.left_ncol && col <= self.right_ncol {
+                maps.insert((col-self.left_ncol-1) as usize, v.split('|').map(|s| s.to_string()).collect());
+            }
+        }
+        if maps.len() > 0 {
+            self.header_check = Some(maps);
+        } else {
+            self.header_check = None;
         }
     }
     /// capture values by address
@@ -557,35 +609,6 @@ impl<'a> XlsxSheet<'a> {
     }
     /// get next row
     fn get_next_row(&mut self) -> Result<Option<(u32, Vec<CellValue<'a>>)>> {
-        fn is_matched_row(row: &Vec<CellValue<'_>>, checks: &HashMap<usize, String>, check_by_and: bool) -> bool {
-            if check_by_and {
-                for (i, v) in checks {
-                    if let Some(cell) = row.get(*i) {
-                        if let Ok(Some(s)) = cell.get::<String>() {
-                            if s != *v {
-                                return false;
-                            }
-                        } else {
-                            return false;
-                        }
-                    } else {
-                        return false;
-                    }
-                }
-                true
-            } else {
-                for (i, v) in checks {
-                    if let Some(cell) = row.get(*i) {
-                        if let Ok(Some(s)) = cell.get::<String>() {
-                            if s == *v {
-                                return true;
-                            }
-                        }
-                    }
-                }
-                false
-            }
-        }
         let mut col: ColNum = 0;
         let mut cell_addr = "".into();
         let mut cell_type = vec![];
@@ -746,7 +769,7 @@ impl<'a> XlsxSheet<'a> {
                     // 0-closed; 1-new; 2-active;
                     if (e.name().as_ref() == b"row") && self.status > 1 && row_value.len() > 0 {
                         if let Some(skip_until) = &self.skip_until {
-                            if is_matched_row(&row_value, skip_until, true) {
+                            if is_matched_row(&row_value, skip_until, true).0 {
                                 self.skip_until = None;
                             } else {
                                 // col = 0;   //  reset each cell
@@ -759,18 +782,11 @@ impl<'a> XlsxSheet<'a> {
                                 continue;
                             }   //  读取到初始行前继续读取
                         } else if let Some(read_before) = &self.read_before {
-                            if is_matched_row(&row_value, read_before, true) {
+                            if is_matched_row(&row_value, read_before, true).0 {
                                 self.status = 0; 
                                 self.read_before = None;
                                 break Ok(None);
                             }  //  读取到结尾行后不再继续读取，且抛弃结尾行
-                        };
-                        if !self.first_row_is_header {    //  不跳过标题行
-                            if let Some(skip_matched) = &self.skip_matched {
-                                if is_matched_row(&row_value, skip_matched, self.skip_matched_check_by_and) {
-                                    continue;    //   如果当前行满足条件，忽略当前行; 
-                                }
-                            } 
                         };
                         if self.right_ncol != MAX_COL_NUM {
                             while row_value.len() < row_value.capacity() {
@@ -778,6 +794,15 @@ impl<'a> XlsxSheet<'a> {
                             };
                         }
                         self.addr_captures = None;    //  返回首行时，不再匹配captures
+                        
+                        // 处理标题行
+                        if !self.first_row_is_header {    //  不跳过标题行
+                            if let Some(skip_matched) = &self.skip_matched {
+                                if is_matched_row(&row_value, skip_matched, self.skip_matched_check_by_and).0 {
+                                    continue;    //   如果当前行满足条件，忽略当前行; 
+                                }
+                            } 
+                        };
                         break Ok(Some((self.currow, row_value)))
                     }else if e.name().as_ref() == b"sheetData" {
                         self.status = 0; 
@@ -801,8 +826,18 @@ impl<'a> XlsxSheet<'a> {
         if self.first_row_is_header {
             match self.get_next_row() {
                 Ok(Some(v)) => {
-                    self.first_row = Some(v);
-                    self.first_row_is_header = false;
+                    if let Some(header_check) = &self.header_check {
+                        let matched = is_matched_row(&v.1, header_check, true);
+                        if matched.0 {
+                            self.first_row = Some(v);
+                            self.first_row_is_header = false;
+                        } else {
+                            return Err(anyhow!("header row check failed: {}", matched.1));
+                        }
+                    } else {
+                        self.first_row = Some(v);
+                        self.first_row_is_header = false;
+                    }
                 },
                 Ok(None) => {},
                 Err(e) => {return Err(e)}
@@ -909,6 +944,9 @@ impl<'a> XlsxSheet<'a> {
     }
     /// Get all the remaining data
     pub fn get_remaining_cells(&mut self) -> Result<Option<(Vec<u32>, Vec<Vec<CellValue<'_>>>)>> {
+        if self.first_row_is_header {
+            self.get_header_row()?;
+        }
         match self.get_next_row() {
             Ok(Some((r, d))) => {
                 let (mut rows, mut data) = if let Some((rn, _)) = self.max_size {
@@ -946,18 +984,21 @@ impl<'a> Iterator for XlsxSheet<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         let mut nums = Vec::with_capacity(self.iter_batch);
         let mut data = Vec::with_capacity(self.iter_batch);
+        if self.first_row_is_header {
+            match self.get_header_row() {
+                Ok(_) => {},
+                Err(e) => {
+                    return Some(Err(e));
+                }
+            }
+        }
         loop {
             match self.get_next_row() {
                 Ok(Some(v)) => {
-                    if self.first_row_is_header {
-                        self.first_row = Some(v);
-                        self.first_row_is_header = false;
-                    } else {
-                        nums.push(v.0);
-                        data.push(v.1);
-                        if nums.len() >= self.iter_batch { 
-                            break Some(Ok((nums, data)))
-                        }
+                    nums.push(v.0);
+                    data.push(v.1);
+                    if nums.len() >= self.iter_batch { 
+                        break Some(Ok((nums, data)))
                     }
                 },
                 Ok(None) => {
