@@ -793,7 +793,6 @@ impl<'a> XlsxSheet<'a> {
                                 row_value.push(CellValue::Blank);
                             };
                         }
-                        self.addr_captures = None;    //  返回首行时，不再匹配captures
                         
                         // 处理标题行
                         if !self.first_row_is_header {    //  不跳过标题行
@@ -803,6 +802,7 @@ impl<'a> XlsxSheet<'a> {
                                 }
                             } 
                         };
+                        self.addr_captures = None;    //  返回首行后，不再匹配captures
                         break Ok(Some((self.currow, row_value)))
                     }else if e.name().as_ref() == b"sheetData" {
                         self.status = 0; 
